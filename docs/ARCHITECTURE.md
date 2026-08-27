@@ -49,6 +49,8 @@ Every action definition has stable identity plus user-editable enable state, ord
 
 The built-in **Developer**, **File**, and **All** presets are seeds for this same configuration model, not separate execution paths. Applying a preset produces ordinary editable settings so later app discovery and user customization behave consistently.
 
+The detailed interaction contract is defined in [Product model](PRODUCT_MODEL.md). In particular, availability, user enablement, and context-sensitive Finder visibility are separate states and must not be collapsed into one toggle.
+
 Competitive products may be used to understand common workflows, but no competitor source, interface text, icon, template, or brand asset is part of the architecture. All shipped implementation and assets must be original or carry a compatible, documented license.
 
 ## Shared state and requests
