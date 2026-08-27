@@ -87,10 +87,14 @@ public enum ApplicationOpenRequestBuilder {
         case .tabby:
             // Tabby uses one directory context and accepts it as a structured
             // argument pair: --directory <path>.
+            let directoryURL = tabbyDirectoryURL(
+                for: intent,
+                firstURL: urls[0]
+            )
             return .structuredLaunch(
                 StructuredLaunchRequest(
                     applicationBundleIdentifier: application.bundleIdentifier,
-                    arguments: [.flag("--directory"), .path(urls[0])]
+                    arguments: [.flag("--directory"), .path(directoryURL)]
                 )
             )
         case .genericURLs, .zed, .visualStudioCode, .terminal:
@@ -111,5 +115,25 @@ public enum ApplicationOpenRequestBuilder {
         case let .currentDirectory(url), let .gitRoot(url):
             return [url]
         }
+    }
+
+    /// Finder selections can be files, while Tabby's `--directory` argument
+    /// only accepts a directory. Context and Git-root intents are already
+    /// semantically directories; only a selected regular file is converted to
+    /// its parent. No directory contents are inspected.
+    private static func tabbyDirectoryURL(
+        for intent: ApplicationOpenIntent,
+        firstURL: URL
+    ) -> URL {
+        guard case .selection = intent else { return firstURL }
+        if firstURL.hasDirectoryPath {
+            return firstURL
+        }
+
+        if let values = try? firstURL.resourceValues(forKeys: [.isDirectoryKey]),
+           values.isDirectory == true {
+            return firstURL
+        }
+        return firstURL.deletingLastPathComponent()
     }
 }

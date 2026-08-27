@@ -49,6 +49,7 @@ private enum ToolboxPage: String, CaseIterable, Identifiable {
 struct SettingsRootView: View {
     @State private var selectedPage: ToolboxPage? = .overview
     @StateObject private var applicationRegistry = ApplicationRegistryModel()
+    @EnvironmentObject private var directoryHistory: DirectoryHistoryModel
 
     var body: some View {
         NavigationSplitView {
@@ -103,7 +104,7 @@ struct SettingsRootView: View {
                 ]
             )
         case .directories:
-            DirectoryLearningPage()
+            DirectoryLearningPage(model: directoryHistory)
         case .pathsAndGit:
             FeaturePage(
                 title: "路径与 Git",
@@ -253,8 +254,22 @@ private struct OpenWithPage: View {
 }
 
 private struct DirectoryLearningPage: View {
-    @AppStorage("directoryLearningEnabled", store: SharedDefaults.store)
+    @ObservedObject var model: DirectoryHistoryModel
+    @AppStorage(SharedDefaults.directoryLearningEnabledKey, store: SharedDefaults.store)
     private var directoryLearningEnabled = true
+    @State private var searchText = ""
+    @State private var showsClearConfirmation = false
+
+    private var sections: DirectoryHistorySections { model.sections }
+
+    private func matching(_ entries: [DirectoryHistoryEntry]) -> [DirectoryHistoryEntry] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return entries }
+        return entries.filter { entry in
+            entry.displayName.localizedStandardContains(query)
+                || entry.normalizedPath.localizedStandardContains(query)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -276,9 +291,47 @@ private struct DirectoryLearningPage: View {
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
 
             HStack(spacing: 14) {
-                ActionCard(title: "固定", detail: "手动保留的重要目录", symbol: "pin", status: "0 个")
-                ActionCard(title: "常用", detail: "默认显示得分最高的 8 个", symbol: "chart.line.uptrend.xyaxis", status: "等待学习")
-                ActionCard(title: "最近", detail: "按最近访问时间快速返回", symbol: "clock", status: "等待学习")
+                ActionCard(title: "固定", detail: "手动保留的重要目录", symbol: "pin", status: "\(sections.pinned.count) 个")
+                ActionCard(title: "常用", detail: "默认显示得分最高的 8 个", symbol: "chart.line.uptrend.xyaxis", status: "\(sections.frequent.count) 个")
+                ActionCard(title: "最近", detail: "按最近访问时间快速返回", symbol: "clock", status: "\(sections.recent.count) 个")
+            }
+
+            DirectorySectionList(
+                title: "固定",
+                entries: matching(sections.pinned),
+                model: model
+            )
+            DirectorySectionList(
+                title: "常用",
+                entries: matching(sections.frequent),
+                model: model
+            )
+            DirectorySectionList(
+                title: "最近",
+                entries: matching(sections.recent),
+                model: model
+            )
+
+            if !model.excludedEntries.isEmpty {
+                DirectorySectionList(
+                    title: "已排除",
+                    entries: matching(model.excludedEntries),
+                    model: model,
+                    showsRestore: true
+                )
+            }
+
+            HStack {
+                Spacer()
+                Button("清空全部历史…", role: .destructive) {
+                    showsClearConfirmation = true
+                }
+                .disabled(model.history.entries.isEmpty)
+            }
+
+            if let errorMessage = model.errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
             }
 
             CalloutCard(
@@ -286,6 +339,149 @@ private struct DirectoryLearningPage: View {
                 title: "隐私边界",
                 detail: "只有目录路径、访问次数和时间保存在 App Group 数据中，数据不会离开这台 Mac。"
             )
+        }
+        .onAppear {
+            model.reload()
+        }
+        .searchable(text: $searchText, prompt: "搜索名称或路径")
+        .confirmationDialog(
+            "清空全部目录历史？",
+            isPresented: $showsClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("清空全部历史", role: .destructive) {
+                model.removeAll()
+            }
+        } message: {
+            Text("固定、常用、最近和排除记录都会被删除，且无法撤销。")
+        }
+    }
+}
+
+private struct DirectorySectionList: View {
+    let title: String
+    let entries: [DirectoryHistoryEntry]
+    @ObservedObject var model: DirectoryHistoryModel
+    var showsRestore = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                Text("\(entries.count)")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
+
+            if entries.isEmpty {
+                Text("暂无目录")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(18)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        DirectoryHistoryRow(
+                            entry: entry,
+                            model: model,
+                            showsRestore: showsRestore
+                        )
+                        if index < entries.count - 1 {
+                            Divider().opacity(0.25)
+                        }
+                    }
+                }
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+}
+
+private struct DirectoryHistoryRow: View {
+    let entry: DirectoryHistoryEntry
+    @ObservedObject var model: DirectoryHistoryModel
+    let showsRestore: Bool
+    @State private var showsRenameDialog = false
+    @State private var proposedName = ""
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: entry.isPinned ? "folder.fill.badge.minus" : "folder")
+                .foregroundStyle(ToolboxTheme.electricCyan)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.displayName)
+                    .font(.headline)
+                Text(entry.normalizedPath)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer()
+
+            if showsRestore {
+                Button("恢复") {
+                    model.setExcluded(false, entry: entry)
+                }
+            } else {
+                Button {
+                    model.openInFinder(entry)
+                } label: {
+                    Image(systemName: "arrow.up.forward.app")
+                }
+                .buttonStyle(.borderless)
+                .help("在 Finder 中打开")
+
+                Button {
+                    model.togglePinned(entry)
+                } label: {
+                    Image(systemName: entry.isPinned ? "pin.slash" : "pin")
+                }
+                .buttonStyle(.borderless)
+                .help(entry.isPinned ? "取消固定" : "固定")
+            }
+
+            Menu {
+                if !showsRestore {
+                    Button("重命名…") {
+                        proposedName = entry.customName ?? entry.displayName
+                        showsRenameDialog = true
+                    }
+                    Button(entry.isPinned ? "取消固定" : "固定") {
+                        model.togglePinned(entry)
+                    }
+                    Button("排除此目录") {
+                        model.setExcluded(true, entry: entry)
+                    }
+                }
+                Button("删除记录", role: .destructive) {
+                    model.remove(entry)
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .alert("重命名目录", isPresented: $showsRenameDialog) {
+            TextField("显示名称", text: $proposedName)
+            Button("取消", role: .cancel) {}
+            Button("保存") {
+                model.setCustomName(proposedName, entry: entry)
+            }
+            Button("恢复默认名称") {
+                model.setCustomName(nil, entry: entry)
+            }
+        } message: {
+            Text(entry.normalizedPath)
         }
     }
 }

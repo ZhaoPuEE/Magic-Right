@@ -73,6 +73,54 @@ struct ApplicationOpenRequestTests {
         #expect(expected.argumentValues == ["--directory", directory.path])
     }
 
+    @Test("Tabby converts a selected file to its parent directory")
+    func tabbySelectedFileUsesParentDirectory() throws {
+        let tabby = try #require(
+            KnownApplicationCatalog.standard.descriptor(
+                forBundleIdentifier: "org.tabby"
+            )
+        )
+        let file = URL(fileURLWithPath: "/tmp/Super Right/project/main.swift")
+        let parent = file.deletingLastPathComponent()
+
+        let request = try ApplicationOpenRequestBuilder.makeRequest(
+            for: tabby,
+            intent: .selection([file])
+        )
+
+        #expect(request == .structuredLaunch(
+            StructuredLaunchRequest(
+                applicationBundleIdentifier: "org.tabby",
+                arguments: [.flag("--directory"), .path(parent)]
+            )
+        ))
+    }
+
+    @Test("Tabby preserves a selected directory")
+    func tabbySelectedDirectoryIsPreserved() throws {
+        let tabby = try #require(
+            KnownApplicationCatalog.standard.descriptor(
+                forBundleIdentifier: "org.tabby"
+            )
+        )
+        let directory = URL(
+            fileURLWithPath: "/tmp/Super Right/project",
+            isDirectory: true
+        )
+
+        let request = try ApplicationOpenRequestBuilder.makeRequest(
+            for: tabby,
+            intent: .selection([directory])
+        )
+
+        #expect(request == .structuredLaunch(
+            StructuredLaunchRequest(
+                applicationBundleIdentifier: "org.tabby",
+                arguments: [.flag("--directory"), .path(directory)]
+            )
+        ))
+    }
+
     @Test("Empty selection is rejected")
     func rejectsEmptySelection() throws {
         let terminal = try #require(

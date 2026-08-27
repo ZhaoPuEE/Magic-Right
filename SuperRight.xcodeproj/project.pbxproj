@@ -17,6 +17,7 @@
 		100000000000000000000008 /* SuperRightCore in Frameworks */ = {isa = PBXBuildFile; productRef = 300000000000000000000001 /* SuperRightCore */; };
 		100000000000000000000009 /* SuperRightCore in Frameworks */ = {isa = PBXBuildFile; productRef = 300000000000000000000002 /* SuperRightCore */; };
 		10000000000000000000000A /* ApplicationRegistryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* ApplicationRegistryModel.swift */; };
+		10000000000000000000000B /* DirectoryHistoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* DirectoryHistoryModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 		20000000000000000000000B /* Super Right.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Super Right.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		20000000000000000000000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		20000000000000000000000D /* ApplicationRegistryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRegistryModel.swift; sourceTree = "<group>"; };
+		20000000000000000000000E /* DirectoryHistoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryHistoryModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +99,7 @@
 				200000000000000000000002 /* SharedDefaults.swift */,
 				200000000000000000000003 /* SettingsRootView.swift */,
 				20000000000000000000000D /* ApplicationRegistryModel.swift */,
+				20000000000000000000000E /* DirectoryHistoryModel.swift */,
 				200000000000000000000004 /* Assets.xcassets */,
 				20000000000000000000000C /* Info.plist */,
 				200000000000000000000007 /* SuperRightApp.entitlements */,
@@ -245,6 +248,7 @@
 				100000000000000000000002 /* SharedDefaults.swift in Sources */,
 				100000000000000000000003 /* SettingsRootView.swift in Sources */,
 				10000000000000000000000A /* ApplicationRegistryModel.swift in Sources */,
+				10000000000000000000000B /* DirectoryHistoryModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
