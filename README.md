@@ -2,9 +2,25 @@
 
 [简体中文](README.zh-CN.md)
 
+<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Super Right icon"></p>
+
 Super Right is a native, open-source macOS utility that turns the Finder context menu into a practical launchpad for developers and everyday file work. It combines a lightweight Finder Sync extension with a menu bar app for configuration, permissions, history, and longer-running operations.
 
 > Super Right is under active development. The items below describe the V1 product scope; there is no stable public release yet.
+
+## Current prototype (0.1.0)
+
+Implemented and source-verified today:
+
+- Native menu bar app, toolbox settings UI, and Finder Sync extension project.
+- Bundle-ID discovery for common editors, terminals, IDEs, and Git clients, plus manual registration of any `.app`.
+- Structured Finder opening for Terminal, Tabby, Visual Studio Code, Zed, and compatible applications.
+- Seven collision-safe New File presets: Markdown, TXT, RTF, XML, JSON, YAML, and `.gitignore`.
+- Local smart folders with a two-second dwell threshold, 30-minute deduplication, 30-day scoring half-life, pinned/frequent/recent views, search, rename, exclusion, and clearing.
+- Absolute, `file://`, and shell-safe path copying.
+- Original AppIcon and menu bar template icon, source verification, and DMG packaging scripts.
+
+Office/custom templates, Git actions, move/copy/undo, archives, and file inspection remain later V1 work. The current test DMG is neither Developer ID signed nor notarized. Real Finder-extension installation, cross-process App Group sharing, and write access in arbitrary Finder locations still require a user-visible test after selecting a Personal Team in Xcode.
 
 ## Why Super Right
 
@@ -102,6 +118,8 @@ The result contains the app and an `Applications` symlink for drag-and-drop inst
 ## Contributing
 
 Use the `main` branch, keep changes small and reviewable, add tests for shared behavior, and run `./scripts/verify-project.sh` before proposing a change. Please do not commit signing material or generated release artifacts.
+
+See the [CHANGELOG](CHANGELOG.md) for version progress.
 
 ## License
 

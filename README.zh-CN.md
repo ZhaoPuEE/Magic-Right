@@ -2,9 +2,25 @@
 
 [English](README.md)
 
+<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Super Right 图标"></p>
+
 Super Right 是一款原生、开源的 macOS 工具，把 Finder 右键菜单变成面向开发工作和日常文件操作的快捷入口。它由轻量的 Finder Sync 扩展和菜单栏宿主 App 组成；设置、权限、历史记录以及耗时操作都由宿主 App 负责。
 
 > Super Right 正在开发中。下列内容是 V1 产品范围，目前尚无稳定公开版本。
+
+## 当前原型（0.1.0）
+
+已经实现并通过源码级验证：
+
+- 原生菜单栏 App、工具箱设置界面和 Finder Sync 扩展工程。
+- 按 Bundle ID 动态发现常见编辑器、终端、IDE 和 Git 客户端，也可手工添加任意 `.app`。
+- Finder 中以结构化参数打开 Terminal、Tabby、Visual Studio Code、Zed 等 App。
+- Markdown、TXT、RTF、XML、JSON、YAML、`.gitignore` 七种安全新建预制，自动避让重名且绝不覆盖。
+- 本地智能目录：2 秒停留阈值、30 分钟去重、30 天半衰期，以及固定 / 常用 / 最近、搜索、改名、排除和清空。
+- 复制绝对路径、`file://` URL 和 Shell 安全路径。
+- 原创 AppIcon、菜单栏 Template Icon、构建验证和 DMG 打包脚本。
+
+尚未实现的是 Office/自定义模板、Git 动作、移动/复制/撤销、压缩解压和文件信息等后续 V1 模块。当前测试 DMG 没有 Developer ID 签名或公证；Finder 扩展的真实安装、跨进程 App Group 和任意目录写入仍需在 Xcode 选择 Personal Team 后进行用户可见验证。
 
 ## 为什么做 Super Right
 
@@ -102,6 +118,8 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 ## 参与开发
 
 使用 `main` 分支，保持改动小且便于审查，为共享核心逻辑补充测试，并在提交改动前运行 `./scripts/verify-project.sh`。请勿提交签名材料或生成的发布产物。
+
+版本进度见 [CHANGELOG](CHANGELOG.md)。
 
 ## 许可证
 
