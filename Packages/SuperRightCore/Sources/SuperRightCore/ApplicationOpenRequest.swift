@@ -87,7 +87,7 @@ public enum ApplicationOpenRequestBuilder {
         case .tabby:
             // Tabby uses one directory context and accepts it as a structured
             // argument pair: --directory <path>.
-            let directoryURL = tabbyDirectoryURL(
+            let directoryURL = directoryContextURL(
                 for: intent,
                 firstURL: urls[0]
             )
@@ -97,7 +97,18 @@ public enum ApplicationOpenRequestBuilder {
                     arguments: [.flag("--directory"), .path(directoryURL)]
                 )
             )
-        case .genericURLs, .zed, .visualStudioCode, .terminal:
+        case .terminal:
+            let directoryURL = directoryContextURL(
+                for: intent,
+                firstURL: urls[0]
+            )
+            return .openURLs(
+                OpenURLsRequest(
+                    applicationBundleIdentifier: application.bundleIdentifier,
+                    urls: [directoryURL]
+                )
+            )
+        case .genericURLs, .zed, .visualStudioCode:
             return .openURLs(
                 OpenURLsRequest(
                     applicationBundleIdentifier: application.bundleIdentifier,
@@ -117,11 +128,11 @@ public enum ApplicationOpenRequestBuilder {
         }
     }
 
-    /// Finder selections can be files, while Tabby's `--directory` argument
-    /// only accepts a directory. Context and Git-root intents are already
-    /// semantically directories; only a selected regular file is converted to
-    /// its parent. No directory contents are inspected.
-    private static func tabbyDirectoryURL(
+    /// Finder selections can be files, while terminal adapters need one
+    /// directory context. Context and Git-root intents are already semantically
+    /// directories; only a selected regular file is converted to its parent.
+    /// No directory contents are inspected.
+    private static func directoryContextURL(
         for intent: ApplicationOpenIntent,
         firstURL: URL
     ) -> URL {

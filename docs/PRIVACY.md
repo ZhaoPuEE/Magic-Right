@@ -1,23 +1,23 @@
 # Privacy
 
-Super Right is designed as a local utility. Its V1 product contract does not require an account, analytics, advertising, telemetry, or a remote service.
+Magic Right is designed as a local utility. Its V1 product contract does not require an account, analytics, advertising, telemetry, or a remote service.
 
 ## Data kept on the Mac
 
-Depending on enabled features, Super Right stores:
+Depending on enabled features, Magic Right stores:
 
 - menu layout, feature toggles, and launch-at-login preference;
 - enabled and discovered applications by bundle identifier, plus cached display metadata;
 - imported template metadata and security-scoped bookmarks chosen by the user;
 - pinned, frequent, and recent directory records, including paths and visit timestamps;
 - exclusions, custom directory names, and the paused/active learning state;
-- a compact record of Super Right file operations needed to show outcomes and support the promised undo behavior.
+- a compact record of Magic Right file operations needed to show outcomes and support the promised undo behavior.
 
 Folder paths can reveal private project names or account names and should be treated as personal data even though they stay local.
 
 ## Smart folder learning
 
-When the user enables learning, Super Right records eligible directory visits reported by Finder and directories opened through Super Right. The user has chosen the inclusive mode: system, hidden, and temporary directories may be recorded unless explicitly excluded.
+When the user enables learning, Magic Right records eligible directory visits reported by Finder and directories opened through Magic Right. The user has chosen the inclusive mode: system, hidden, and temporary directories may be recorded unless explicitly excluded.
 
 Learning does **not**:
 
@@ -30,11 +30,11 @@ The full history is retained until the user removes records or clears it. Missin
 
 ## Application discovery
 
-Super Right asks macOS Launch Services which applications can handle relevant files or folders, and reads application metadata such as bundle ID, display name, and icon. It does not launch a newly discovered app or place it in the Finder menu without the user's choice.
+Magic Right asks macOS Launch Services which applications can handle relevant files or folders, and reads application metadata such as bundle ID, display name, and icon. It does not launch a newly discovered app or place it in the Finder menu without the user's choice.
 
 ## Network behavior
 
-Core features are local. Opening a Git remote page hands the URL to the user's chosen browser; network access then belongs to the browser and remote site. Super Right must not contact a Git host merely to construct or display that action.
+Core features are local. Opening a Git remote page hands the URL to the user's chosen browser; network access then belongs to the browser and remote site. Magic Right must not contact a Git host merely to construct or display that action.
 
 If update checks or other network features are proposed later, they require separate documentation and a visible user control before release. They are not part of this V1 contract.
 

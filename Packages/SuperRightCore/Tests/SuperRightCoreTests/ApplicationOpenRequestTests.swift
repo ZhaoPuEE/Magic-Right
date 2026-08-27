@@ -80,7 +80,7 @@ struct ApplicationOpenRequestTests {
                 forBundleIdentifier: "org.tabby"
             )
         )
-        let file = URL(fileURLWithPath: "/tmp/Super Right/project/main.swift")
+        let file = URL(fileURLWithPath: "/tmp/Magic Right/project/main.swift")
         let parent = file.deletingLastPathComponent()
 
         let request = try ApplicationOpenRequestBuilder.makeRequest(
@@ -104,7 +104,7 @@ struct ApplicationOpenRequestTests {
             )
         )
         let directory = URL(
-            fileURLWithPath: "/tmp/Super Right/project",
+            fileURLWithPath: "/tmp/Magic Right/project",
             isDirectory: true
         )
 
@@ -117,6 +117,29 @@ struct ApplicationOpenRequestTests {
             StructuredLaunchRequest(
                 applicationBundleIdentifier: "org.tabby",
                 arguments: [.flag("--directory"), .path(directory)]
+            )
+        ))
+    }
+
+    @Test("Terminal converts a selected file to its parent directory")
+    func terminalSelectedFileUsesParentDirectory() throws {
+        let terminal = try #require(
+            KnownApplicationCatalog.standard.descriptor(
+                forBundleIdentifier: "com.apple.Terminal"
+            )
+        )
+        let file = URL(fileURLWithPath: "/tmp/Magic Right/project/main.swift")
+        let parent = file.deletingLastPathComponent()
+
+        let request = try ApplicationOpenRequestBuilder.makeRequest(
+            for: terminal,
+            intent: .selection([file])
+        )
+
+        #expect(request == .openURLs(
+            OpenURLsRequest(
+                applicationBundleIdentifier: "com.apple.Terminal",
+                urls: [parent]
             )
         ))
     }

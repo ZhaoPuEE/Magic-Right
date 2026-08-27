@@ -18,6 +18,7 @@
 		100000000000000000000009 /* SuperRightCore in Frameworks */ = {isa = PBXBuildFile; productRef = 300000000000000000000002 /* SuperRightCore */; };
 		10000000000000000000000A /* ApplicationRegistryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* ApplicationRegistryModel.swift */; };
 		10000000000000000000000B /* DirectoryHistoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* DirectoryHistoryModel.swift */; };
+		10000000000000000000000C /* ToolboxConfigurationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000F /* ToolboxConfigurationModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,10 +56,11 @@
 		200000000000000000000008 /* SuperRightFinderExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SuperRightFinderExtension.entitlements; sourceTree = "<group>"; };
 		200000000000000000000009 /* SuperRightFinderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SuperRightFinderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		20000000000000000000000A /* FinderSync.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FinderSync.framework; path = System/Library/Frameworks/FinderSync.framework; sourceTree = SDKROOT; };
-		20000000000000000000000B /* Super Right.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Super Right.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		20000000000000000000000B /* Magic Right.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Magic Right.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		20000000000000000000000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		20000000000000000000000D /* ApplicationRegistryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRegistryModel.swift; sourceTree = "<group>"; };
 		20000000000000000000000E /* DirectoryHistoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryHistoryModel.swift; sourceTree = "<group>"; };
+		20000000000000000000000F /* ToolboxConfigurationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolboxConfigurationModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +102,7 @@
 				200000000000000000000003 /* SettingsRootView.swift */,
 				20000000000000000000000D /* ApplicationRegistryModel.swift */,
 				20000000000000000000000E /* DirectoryHistoryModel.swift */,
+				20000000000000000000000F /* ToolboxConfigurationModel.swift */,
 				200000000000000000000004 /* Assets.xcassets */,
 				20000000000000000000000C /* Info.plist */,
 				200000000000000000000007 /* SuperRightApp.entitlements */,
@@ -128,7 +131,7 @@
 		800000000000000000000005 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				20000000000000000000000B /* Super Right.app */,
+				20000000000000000000000B /* Magic Right.app */,
 				200000000000000000000009 /* SuperRightFinderExtension.appex */,
 			);
 			name = Products;
@@ -156,7 +159,7 @@
 				300000000000000000000001 /* SuperRightCore */,
 			);
 			productName = SuperRight;
-			productReference = 20000000000000000000000B /* Super Right.app */;
+			productReference = 20000000000000000000000B /* Magic Right.app */;
 			productType = "com.apple.product-type.application";
 		};
 		600000000000000000000002 /* SuperRightFinderExtension */ = {
@@ -249,6 +252,7 @@
 				100000000000000000000003 /* SettingsRootView.swift in Sources */,
 				10000000000000000000000A /* ApplicationRegistryModel.swift in Sources */,
 				10000000000000000000000B /* DirectoryHistoryModel.swift in Sources */,
+				10000000000000000000000C /* ToolboxConfigurationModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,8 +400,8 @@
 				INFOPLIST_FILE = SuperRightApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", );
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.superright.app;
-				PRODUCT_NAME = "Super Right";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.magicright.app;
+				PRODUCT_NAME = "Magic Right";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
@@ -418,8 +422,8 @@
 				INFOPLIST_FILE = SuperRightApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", );
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.superright.app;
-				PRODUCT_NAME = "Super Right";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.magicright.app;
+				PRODUCT_NAME = "Magic Right";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
@@ -439,7 +443,7 @@
 				INFOPLIST_FILE = SuperRightFinderExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "dev.superright.app.finder-extension";
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.magicright.app.finder-extension";
 				PRODUCT_NAME = SuperRightFinderExtension;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -461,7 +465,7 @@
 				INFOPLIST_FILE = SuperRightFinderExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "dev.superright.app.finder-extension";
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.magicright.app.finder-extension";
 				PRODUCT_NAME = SuperRightFinderExtension;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

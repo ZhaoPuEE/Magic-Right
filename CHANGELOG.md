@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to Super Right are documented here. The project follows Semantic Versioning.
+All notable changes to Magic Right are documented here. The project follows Semantic Versioning.
 
 ## [0.1.0] - Unreleased
 
 ### Added
 
 - Native SwiftUI menu bar host and Finder Sync extension targeting macOS 15.
-- Graphite-and-cyan toolbox control center and original application/menu bar icons.
+- Lightweight native action control center and original application/menu bar icons.
 - Bundle-ID application registry with Launch Services resolution, manual `.app` registration, and safe structured opening.
 - Known discovery entries for Zed, Visual Studio Code, Tabby, Terminal, Cursor, VSCodium, iTerm2, Warp, Ghostty, Sublime Text, Nova, common JetBrains IDEs, and Git clients.
 - Seven collision-safe built-in New File presets.
@@ -18,5 +18,5 @@ All notable changes to Super Right are documented here. The project follows Sema
 ### Validation status
 
 - Shared Core tests and unsigned arm64 Debug/Release builds pass locally.
-- The test DMG layout and checksum are verified locally.
+- A Magic Right branded, signed, and notarized DMG has not been produced yet.
 - Signed installation, Finder context-menu visibility, App Group behavior, arbitrary-folder writes, and notarization remain pending.

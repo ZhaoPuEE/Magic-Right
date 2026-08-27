@@ -1,4 +1,4 @@
-# Super Right development rules
+# Magic Right development rules
 
 - Keep all source, tests, packaging scripts, and documentation in this repository.
 - The default branch is `main`; make small, reviewable commits and never commit credentials, signing certificates, notarization profiles, build products, or DMGs.

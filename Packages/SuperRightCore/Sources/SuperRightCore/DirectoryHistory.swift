@@ -54,6 +54,26 @@ public struct DirectoryHistoryEntry: Codable, Hashable, Identifiable, Sendable {
     public private(set) var firstVisitedAt: Date
     public private(set) var lastVisitedAt: Date
     public private(set) var lastCountedVisitAt: Date
+    /// Exponentially decayed visit weight anchored at `scoreUpdatedAt`.
+    ///
+    /// Keeping one accumulator avoids retaining an unbounded visit log while
+    /// ensuring that a new visit adds only its own weight instead of making
+    /// every historical visit recent again.
+    private var decayedVisitScore: Double
+    private var scoreUpdatedAt: Date
+
+    private enum CodingKeys: String, CodingKey {
+        case normalizedPath
+        case customName
+        case isPinned
+        case isExcluded
+        case visitCount
+        case firstVisitedAt
+        case lastVisitedAt
+        case lastCountedVisitAt
+        case decayedVisitScore
+        case scoreUpdatedAt
+    }
 
     public init(
         directoryURL: URL,
@@ -70,6 +90,49 @@ public struct DirectoryHistoryEntry: Codable, Hashable, Identifiable, Sendable {
         firstVisitedAt = visitedAt
         lastVisitedAt = visitedAt
         lastCountedVisitAt = visitedAt
+        decayedVisitScore = 1
+        scoreUpdatedAt = visitedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        normalizedPath = try container.decode(String.self, forKey: .normalizedPath)
+        customName = Self.cleanedName(
+            try container.decodeIfPresent(String.self, forKey: .customName)
+        )
+        isPinned = try container.decode(Bool.self, forKey: .isPinned)
+        isExcluded = try container.decode(Bool.self, forKey: .isExcluded)
+        visitCount = try container.decode(Int.self, forKey: .visitCount)
+        firstVisitedAt = try container.decode(Date.self, forKey: .firstVisitedAt)
+        lastVisitedAt = try container.decode(Date.self, forKey: .lastVisitedAt)
+        lastCountedVisitAt = try container.decode(Date.self, forKey: .lastCountedVisitAt)
+
+        // V1 data did not retain an independently aged score. Anchoring its
+        // aggregate count at the last counted visit preserves its previous
+        // score at migration time, then lets the entire old contribution age
+        // normally before any future visit adds one new unit.
+        decayedVisitScore = try container.decodeIfPresent(
+            Double.self,
+            forKey: .decayedVisitScore
+        ) ?? Double(visitCount)
+        scoreUpdatedAt = try container.decodeIfPresent(
+            Date.self,
+            forKey: .scoreUpdatedAt
+        ) ?? lastCountedVisitAt
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(normalizedPath, forKey: .normalizedPath)
+        try container.encodeIfPresent(customName, forKey: .customName)
+        try container.encode(isPinned, forKey: .isPinned)
+        try container.encode(isExcluded, forKey: .isExcluded)
+        try container.encode(visitCount, forKey: .visitCount)
+        try container.encode(firstVisitedAt, forKey: .firstVisitedAt)
+        try container.encode(lastVisitedAt, forKey: .lastVisitedAt)
+        try container.encode(lastCountedVisitAt, forKey: .lastCountedVisitAt)
+        try container.encode(decayedVisitScore, forKey: .decayedVisitScore)
+        try container.encode(scoreUpdatedAt, forKey: .scoreUpdatedAt)
     }
 
     public var directoryURL: URL {
@@ -85,21 +148,22 @@ public struct DirectoryHistoryEntry: Codable, Hashable, Identifiable, Sendable {
         return fallback.isEmpty ? normalizedPath : fallback
     }
 
-    /// Frequency with exponential recency decay. A record with the same visit
-    /// count has exactly half its score after one configured half-life.
+    /// Frequency with per-visit exponential recency decay. With no new visit,
+    /// a record has exactly half its score after one configured half-life.
     public func score(
         at date: Date,
         halfLife: TimeInterval = DirectoryHistoryPolicy.default.scoreHalfLife
     ) -> Double {
         let validHalfLife = max(.leastNonzeroMagnitude, halfLife)
-        let age = max(0, date.timeIntervalSince(lastVisitedAt))
+        let age = max(0, date.timeIntervalSince(scoreUpdatedAt))
         let recencyDecay = pow(0.5, age / validHalfLife)
-        return Double(visitCount) * recencyDecay
+        return decayedVisitScore * recencyDecay
     }
 
     fileprivate mutating func registerVisit(
         at date: Date,
-        deduplicationInterval: TimeInterval
+        deduplicationInterval: TimeInterval,
+        scoreHalfLife: TimeInterval
     ) -> Bool {
         firstVisitedAt = min(firstVisitedAt, date)
         lastVisitedAt = max(lastVisitedAt, date)
@@ -108,6 +172,11 @@ public struct DirectoryHistoryEntry: Codable, Hashable, Identifiable, Sendable {
             return false
         }
 
+        let validHalfLife = max(.leastNonzeroMagnitude, scoreHalfLife)
+        let scoreAge = max(0, date.timeIntervalSince(scoreUpdatedAt))
+        decayedVisitScore *= pow(0.5, scoreAge / validHalfLife)
+        decayedVisitScore += 1
+        scoreUpdatedAt = date
         visitCount += 1
         lastCountedVisitAt = date
         return true
@@ -163,7 +232,7 @@ public struct DirectoryHistorySections: Codable, Hashable, Sendable {
 }
 
 /// Persistable, local-only history for directories observed by Finder or
-/// opened through Super Right.
+/// opened through Magic Right.
 ///
 /// This type performs no file-system scan and never removes stale records on
 /// its own. Callers inject a lightweight existence check when constructing a
@@ -200,7 +269,8 @@ public struct DirectoryHistory: Codable, Hashable, Sendable {
 
         let didCount = entries[index].registerVisit(
             at: date,
-            deduplicationInterval: policy.deduplicationInterval
+            deduplicationInterval: policy.deduplicationInterval,
+            scoreHalfLife: policy.scoreHalfLife
         )
         return didCount ? .countedVisit : .refreshedRecentVisit
     }
@@ -208,6 +278,13 @@ public struct DirectoryHistory: Codable, Hashable, Sendable {
     public func entry(for directoryURL: URL) -> DirectoryHistoryEntry? {
         let identity = DirectoryPathIdentity.normalize(directoryURL)
         return entries.first { $0.normalizedPath == identity }
+    }
+
+    /// Decodes a persisted value while distinguishing a missing value from a
+    /// corrupt one. Callers must not replace data when this method throws.
+    public static func decodeStoredData(_ data: Data?) throws -> DirectoryHistory {
+        guard let data else { return DirectoryHistory() }
+        return try JSONDecoder().decode(DirectoryHistory.self, from: data)
     }
 
     @discardableResult

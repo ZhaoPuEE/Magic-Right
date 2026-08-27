@@ -5,25 +5,43 @@ import SuperRightCore
 @main
 struct SuperRightApp: App {
     @StateObject private var directoryHistory = DirectoryHistoryModel()
+    @StateObject private var toolboxConfiguration = ToolboxConfigurationModel()
 
     var body: some Scene {
-        MenuBarExtra("Super Right", image: "MenuBarIcon") {
+        MenuBarExtra("Magic Right", image: "MenuBarIcon") {
             MenuBarContentView()
                 .environmentObject(directoryHistory)
+                .environmentObject(toolboxConfiguration)
         }
         .menuBarExtraStyle(.menu)
 
-        Settings {
+        WindowGroup("Magic Right", id: "settings") {
             SettingsRootView()
                 .environmentObject(directoryHistory)
+                .environmentObject(toolboxConfiguration)
         }
+        .handlesExternalEvents(matching: ["settings"])
+        .defaultSize(width: 1120, height: 760)
     }
 }
 
 private struct MenuBarContentView: View {
     @EnvironmentObject private var directoryHistory: DirectoryHistoryModel
+    @Environment(\.openWindow) private var openWindow
     @AppStorage(SharedDefaults.directoryLearningEnabledKey, store: SharedDefaults.store)
     private var directoryLearningEnabled = true
+
+    private var learningToggle: Binding<Bool> {
+        Binding(
+            get: {
+                SharedDefaults.isAppGroupAvailable && directoryLearningEnabled
+            },
+            set: { isEnabled in
+                guard SharedDefaults.isAppGroupAvailable else { return }
+                directoryLearningEnabled = isEnabled
+            }
+        )
+    }
 
     var body: some View {
         let sections = directoryHistory.sections
@@ -41,15 +59,24 @@ private struct MenuBarContentView: View {
 
         Divider()
 
-        Toggle("学习常用目录", isOn: $directoryLearningEnabled)
+        Toggle("学习常用目录", isOn: learningToggle)
+            .disabled(!SharedDefaults.isAppGroupAvailable)
+            .help(
+                SharedDefaults.isAppGroupAvailable
+                    ? "只记录目录路径、访问次数和时间"
+                    : "App Group 不可用，目录学习已关闭"
+            )
 
-        SettingsLink {
+        Button {
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            openWindow(id: "settings")
+        } label: {
             Label("设置…", systemImage: "gearshape")
         }
 
         Divider()
 
-        Button("退出 Super Right") {
+        Button("退出 Magic Right") {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q", modifiers: [.command])
@@ -57,8 +84,6 @@ private struct MenuBarContentView: View {
             directoryHistory.reload()
         }
     }
-
-    @Environment(\.openSettings) private var openSettings
 
     @ViewBuilder
     private func directorySection(
@@ -77,5 +102,10 @@ private struct MenuBarContentView: View {
                 }
             }
         }
+    }
+
+    private func openSettings() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        openWindow(id: "settings")
     }
 }

@@ -4,7 +4,7 @@ This document defines the intended V1 boundaries. It is a contract for implement
 
 ## System shape
 
-Super Right uses a native macOS container app with a Finder Sync extension and a shared core:
+Magic Right uses a native macOS container app with a Finder Sync extension and a shared core:
 
 ```text
 Finder selection / observed directory
@@ -25,7 +25,7 @@ Finder selection / observed directory
 
 The targets are expected to remain separable:
 
-- **SuperRight app**: SwiftUI settings and onboarding, menu bar UI, app discovery, permissions diagnostics, directory history, operation dispatch, and long-running work.
+- **Magic Right host app**: SwiftUI settings and onboarding, menu bar UI, app discovery, permissions diagnostics, directory history, operation dispatch, and long-running work.
 - **Finder Sync extension**: selection resolution, context-aware menu generation, observation events, and lightweight requests to the host app.
 - **Shared Core**: data models, scoring, menu configuration, path and Git logic, application adapters, archive validation, collision naming, and persistence contracts.
 - **Tests**: deterministic tests for Shared Core behavior. File-system tests use isolated temporary directories.
@@ -45,13 +45,13 @@ The host app presents one coherent configuration surface rather than a collectio
 7. **Archive**: supported create/extract formats and extraction safety outcomes.
 8. **Settings**: menu composition, login item, appearance, permissions, privacy controls, diagnostics, and product information.
 
-Every action definition has stable identity plus user-editable enable state, order, display name, and Finder-menu visibility. Display-name changes do not alter the action identity. A user may keep actions in the Super Right submenu or promote selected high-frequency actions, subject to bounded menu-size rules.
+Every action definition has stable identity plus user-editable enable state, order, display name, and Finder-menu visibility. Display-name changes do not alter the action identity. A user may keep actions in the Magic Right submenu or promote selected high-frequency actions, subject to bounded menu-size rules.
 
 The built-in **Developer**, **File**, and **All** presets are seeds for this same configuration model, not separate execution paths. Applying a preset produces ordinary editable settings so later app discovery and user customization behave consistently.
 
 The detailed interaction contract is defined in [Product model](PRODUCT_MODEL.md). In particular, availability, user enablement, and context-sensitive Finder visibility are separate states and must not be collapsed into one toggle.
 
-Competitive products may be used to understand common workflows, but no competitor source, interface text, icon, template, or brand asset is part of the architecture. All shipped implementation and assets must be original or carry a compatible, documented license.
+All shipped implementation and assets must be original or carry a compatible, documented license. External source code, interface text, icons, templates, and brand assets are not part of this architecture.
 
 ## Shared state and requests
 
@@ -93,7 +93,7 @@ No strategy invokes `/bin/sh`, interpolates paths into a command string, or acce
 
 ## Smart directory learning
 
-`DirectoryLearningService` accepts observations from Finder directory callbacks and Super Right open/navigation actions. It stores the directory URL and event time; it does not list, index, or read files in that directory.
+`DirectoryLearningService` accepts observations from Finder directory callbacks and Magic Right open/navigation actions. It stores the directory URL and event time; it does not list, index, or read files in that directory.
 
 V1 behavior:
 
@@ -118,7 +118,7 @@ All mutations follow the same safety contract:
 - record enough metadata to explain the result and support the promised undo operation;
 - surface partial failure per item for multi-selection actions.
 
-The V1 undo contract covers the most recent move initiated by Super Right. Undo must refuse to overwrite a file created at the original path after the move.
+The V1 undo contract covers the most recent move initiated by Magic Right. Undo must refuse to overwrite a file created at the original path after the move.
 
 New Office documents must come from valid minimal package templates and be verified by opening them in Microsoft Word, Excel, and PowerPoint during release testing. Appending an Office extension to an empty file is invalid.
 
@@ -151,6 +151,6 @@ Git detection walks parent directories from the selected URL without scanning un
 - No accessibility permission dependency.
 - No directory-content collection for smart folders.
 - No signing credential, certificate, notarization profile, or built artifact in the repository.
-- No copied competitor code, interface text, icon, template, or brand asset.
+- No copied third-party code, interface text, icon, template, or brand asset without a compatible documented license.
 
 See [Privacy](PRIVACY.md) and [Permissions](PERMISSIONS.md) for the user-facing consequences of these invariants.

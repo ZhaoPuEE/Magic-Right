@@ -8,5 +8,12 @@ xcuserdata/
 *.xcscmblueprint
 *.dmg
 *.zip
+*.xcarchive
+*.cer
+*.p12
+*.p8
+*.mobileprovision
+.env
+.env.*
+.envrc
 .swiftpm/
-

@@ -2,12 +2,14 @@
 
 ## Requirements
 
-- macOS 15 or later for running Super Right
+- macOS 15 or later for running Magic Right
 - A current Xcode toolchain with Swift 6 and the macOS 15 SDK or later
 - Xcode Command Line Tools (`xcode-select -p` should succeed)
 - Git
 
 The repository does not contain certificates, private keys, notarization credentials, provisioning profiles, built apps, or DMGs.
+
+The shipped product name is **Magic Right**. The Xcode project, scheme, Swift module, and several source types intentionally retain the internal `SuperRight` technical name for source compatibility during the rename.
 
 ## Open the project
 
@@ -17,7 +19,7 @@ From the repository root:
 open SuperRight.xcodeproj
 ```
 
-Select the `SuperRight` scheme and the **My Mac** destination. The app and Finder extension must use compatible signing teams and the same App Group capability. A free Xcode Personal Team is sufficient for local development, although its provisioning has Apple-imposed limitations.
+Select the `SuperRight` scheme and the **My Mac** destination. The app and Finder extension must use compatible signing teams and the same App Group capability. Use a development team for which Xcode can create App Group provisioning for both targets. Do not assume a free Personal Team supports this capability; confirm the generated profiles in the current Xcode account. Public distribution requires Apple Developer Program membership and Developer ID credentials.
 
 Do not commit changes under `xcuserdata` or any locally generated signing material.
 
@@ -48,8 +50,8 @@ The positional argument takes precedence. The unsigned build verifies compilatio
 
 1. Configure the same development team and App Group for both targets.
 2. Run the host app once from Xcode.
-3. Follow the onboarding link to enable the Super Right Finder extension in System Settings.
-4. In Finder, right-click a disposable test folder and confirm the Super Right menu appears.
+3. Follow the onboarding link to enable the Magic Right Finder extension in System Settings.
+4. In Finder, right-click a disposable test folder and confirm the Magic Right menu appears.
 5. Test opening a path that includes spaces and non-ASCII characters in each enabled app.
 6. Confirm the extension remains responsive during hashing, archive, copy, and move operations performed by the host app.
 
@@ -80,10 +82,10 @@ An unsigned app is suitable only for build verification. Use Xcode's archive/exp
 Given an already built `.app`:
 
 ```sh
-./scripts/create-dmg.sh "/absolute/path/to/Super Right.app" ./dist
+./scripts/create-dmg.sh "/absolute/path/to/Magic Right.app" ./dist
 ```
 
-The output is `dist/Super Right.dmg`. The image contains the app and an `Applications` symlink. The script:
+The output is `dist/Magic Right.dmg`. The image contains the app and an `Applications` symlink. The script:
 
 - validates the `.app` suffix and bundle structure;
 - stages through a private temporary directory;

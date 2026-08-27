@@ -3,8 +3,11 @@ import SwiftUI
 import SuperRightCore
 
 private enum ToolboxTheme {
-    static let electricCyan = Color(red: 0.12, green: 0.9, blue: 1)
-    static let graphite = Color(red: 0.075, green: 0.085, blue: 0.1)
+    static let electricCyan = Color(nsColor: .controlAccentColor)
+    static let graphite = Color(nsColor: .windowBackgroundColor)
+    static let surface = Color(nsColor: .controlBackgroundColor)
+    static let border = Color(nsColor: .separatorColor)
+    static let secondaryText = Color.secondary
 }
 
 private enum ToolboxPage: String, CaseIterable, Identifiable {
@@ -21,14 +24,27 @@ private enum ToolboxPage: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .overview: "总览"
-        case .openWith: "打开方式"
-        case .newFile: "新建文件"
-        case .directories: "常用目录"
-        case .pathsAndGit: "路径与 Git"
-        case .fileTools: "文件工具"
-        case .archives: "压缩解压"
-        case .settings: "设置"
+        case .overview: "Finder 菜单"
+        case .openWith: "应用动作"
+        case .newFile: "创建文件"
+        case .directories: "智能目录"
+        case .pathsAndGit: "路径与仓库"
+        case .fileTools: "文件操作"
+        case .archives: "归档"
+        case .settings: "偏好设置"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .overview: "查看菜单构成与动作状态"
+        case .openWith: "编辑器、终端与开发工具"
+        case .newFile: "七种内置文件模板"
+        case .directories: "本地记忆、固定与快速跳转"
+        case .pathsAndGit: "路径复制与仓库上下文"
+        case .fileTools: "安全移动、复制和信息工具"
+        case .archives: "系统归档格式"
+        case .settings: "扩展、预设和权限"
         }
     }
 
@@ -44,103 +60,151 @@ private enum ToolboxPage: String, CaseIterable, Identifiable {
         case .settings: "gearshape"
         }
     }
+
+    var actions: [ToolboxAction] {
+        switch self {
+        case .overview, .settings:
+            []
+        case .openWith:
+            [.openWith]
+        case .newFile:
+            [
+                .newMarkdown, .newPlainText, .newRichText, .newXML,
+                .newJSON, .newYAML, .newGitignore
+            ]
+        case .directories:
+            [.frequentDirectories]
+        case .pathsAndGit:
+            [
+                .copyAbsolutePath, .copyShellPath, .copyFileURL,
+                .copyGitRelativePath, .openGitRoot, .openGitRootInEditor,
+                .openOrigin, .copyOriginURL
+            ]
+        case .fileTools:
+            [.moveTo, .copyTo, .cut, .paste, .fileInfo, .createAlias]
+        case .archives:
+            [.archive, .unarchive]
+        }
+    }
+
+    static let featurePages: [ToolboxPage] = [
+        .openWith, .newFile, .directories, .pathsAndGit, .fileTools, .archives
+    ]
 }
 
 struct SettingsRootView: View {
     @State private var selectedPage: ToolboxPage? = .overview
     @StateObject private var applicationRegistry = ApplicationRegistryModel()
     @EnvironmentObject private var directoryHistory: DirectoryHistoryModel
+    @EnvironmentObject private var toolbox: ToolboxConfigurationModel
 
     var body: some View {
         NavigationSplitView {
             List(ToolboxPage.allCases, selection: $selectedPage) { page in
-                Label(page.title, systemImage: page.symbol)
-                    .tag(page)
+                SidebarPageRow(
+                    page: page,
+                    counts: counts(for: page)
+                )
+                .tag(page)
             }
-            .navigationSplitViewColumnWidth(min: 176, ideal: 192, max: 230)
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 185, ideal: 200, max: 225)
             .scrollContentBackground(.hidden)
             .background(.ultraThinMaterial)
         } detail: {
             ZStack {
                 ToolboxTheme.graphite
-                    .opacity(0.97)
                     .ignoresSafeArea()
-
-                LinearGradient(
-                    colors: [ToolboxTheme.electricCyan.opacity(0.08), .clear],
-                    startPoint: .topTrailing,
-                    endPoint: .center
-                )
-                .ignoresSafeArea()
 
                 ScrollView {
                     pageContent(selectedPage ?? .overview)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(28)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 22)
                 }
             }
         }
-        .preferredColorScheme(.dark)
         .tint(ToolboxTheme.electricCyan)
         .frame(minWidth: 900, minHeight: 600)
+        .onAppear {
+            toolbox.reload()
+            applicationRegistry.scan()
+        }
     }
 
     @ViewBuilder
     private func pageContent(_ page: ToolboxPage) -> some View {
         switch page {
         case .overview:
-            OverviewPage()
+            OverviewPage(
+                selectedPage: Binding(
+                    get: { selectedPage ?? .overview },
+                    set: { selectedPage = $0 }
+                ),
+                toolbox: toolbox,
+                applications: applicationRegistry
+            )
         case .openWith:
-            OpenWithPage(model: applicationRegistry)
-        case .newFile:
-            FeaturePage(
-                title: "新建文件",
-                subtitle: "从 Finder 直接创建真正可打开的文件和自己的模板。",
-                features: [
-                    ("Markdown / 文本", "doc.plaintext", "启用"),
-                    ("JSON / YAML / XML", "curlybraces", "启用"),
-                    ("Word / Excel / PowerPoint", "doc.richtext", "规划中"),
-                    ("自定义模板", "square.stack.3d.up", "规划中")
-                ]
+            OpenWithPage(
+                toolbox: toolbox,
+                applications: applicationRegistry
             )
+        case .newFile, .pathsAndGit, .fileTools, .archives:
+            ToolboxActionListPage(page: page, model: toolbox)
         case .directories:
-            DirectoryLearningPage(model: directoryHistory)
-        case .pathsAndGit:
-            FeaturePage(
-                title: "路径与 Git",
-                subtitle: "复制安全路径，并让仓库相关动作只在合适的位置出现。",
-                features: [
-                    ("复制绝对路径", "link", "启用"),
-                    ("复制 Shell 安全路径", "terminal", "规划中"),
-                    ("打开仓库根目录", "arrow.up.left.and.arrow.down.right", "规划中"),
-                    ("打开 origin 页面", "network", "规划中")
-                ]
-            )
-        case .fileTools:
-            FeaturePage(
-                title: "文件工具",
-                subtitle: "首版聚焦安全、可撤销且不会静默覆盖的文件操作。",
-                features: [
-                    ("文件信息与哈希", "info.circle", "规划中"),
-                    ("移动 / 复制到", "folder.badge.plus", "规划中"),
-                    ("剪切 / 粘贴", "scissors", "规划中"),
-                    ("撤销上次移动", "arrow.uturn.backward", "规划中")
-                ]
-            )
-        case .archives:
-            FeaturePage(
-                title: "压缩解压",
-                subtitle: "优先使用系统格式；解压前验证路径，避免归档穿越。",
-                features: [
-                    ("压缩为 ZIP", "doc.zipper", "规划中"),
-                    ("压缩为 tar.gz", "archivebox", "规划中"),
-                    ("解压到当前目录", "arrow.down.doc", "规划中"),
-                    ("解压到同名目录", "folder.badge.plus", "规划中")
-                ]
-            )
+            DirectoryLearningPage(model: directoryHistory, toolbox: toolbox)
         case .settings:
-            GeneralSettingsPage()
+            GeneralSettingsPage(toolbox: toolbox)
         }
+    }
+
+    private func counts(for page: ToolboxPage) -> FeatureCounts? {
+        guard page != .overview, page != .settings else { return nil }
+        if page == .openWith {
+            let enabledApps = applicationRegistry.applications.filter(
+                applicationRegistry.isEnabled
+            ).count
+            return FeatureCounts(
+                enabled: enabledApps,
+                available: applicationRegistry.applications.count
+            )
+        }
+        return FeatureCounts(
+            enabled: toolbox.enabledCount(in: page.actions),
+            available: toolbox.availableCount(in: page.actions)
+        )
+    }
+}
+
+private struct FeatureCounts {
+    let enabled: Int
+    let available: Int
+}
+
+private struct SidebarPageRow: View {
+    let page: ToolboxPage
+    let counts: FeatureCounts?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: page.symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(ToolboxTheme.electricCyan)
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(page.title)
+                    .font(.system(size: 14, weight: .semibold))
+                if let counts {
+                    Text("\(counts.enabled) 已启用 / \(counts.available) 可用")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 4)
+        }
+        .frame(minHeight: 38)
+        .contentShape(Rectangle())
     }
 }
 
@@ -151,150 +215,519 @@ private struct PageHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(title)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .font(.system(size: 26, weight: .semibold))
             Text(subtitle)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ToolboxTheme.secondaryText)
                 .font(.callout)
         }
-        .padding(.bottom, 8)
     }
 }
 
 private struct OverviewPage: View {
-    private let columns = [GridItem(.adaptive(minimum: 220), spacing: 14)]
+    @Binding var selectedPage: ToolboxPage
+    @ObservedObject var toolbox: ToolboxConfigurationModel
+    @ObservedObject var applications: ApplicationRegistryModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            PageHeader(
+                title: "Finder 菜单",
+                subtitle: "启用的动作组成右键菜单；不适用的动作会按当前选择自动隐藏。"
+            )
+
+            VStack(spacing: 0) {
+                ForEach(ToolboxPage.featurePages) { page in
+                    Button {
+                        selectedPage = page
+                    } label: {
+                        GroupSummaryCard(
+                            page: page,
+                            counts: counts(for: page)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    if page != ToolboxPage.featurePages.last {
+                        Divider()
+                    }
+                }
+            }
+            .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(ToolboxTheme.border, lineWidth: 1)
+            }
+
+            GroupBox {
+                HStack(spacing: 12) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(ToolboxTheme.electricCyan)
+                    Text("“可用”表示已经实现并能进入菜单；标记为“开发中”的动作不会被启用。")
+                        .foregroundStyle(ToolboxTheme.secondaryText)
+                    Spacer()
+                }
+                .padding(4)
+            }
+            .groupBoxStyle(GraphiteGroupBoxStyle())
+
+            if let errorMessage = toolbox.errorMessage {
+                ErrorLabel(message: errorMessage)
+            }
+        }
+    }
+
+    private func counts(for page: ToolboxPage) -> FeatureCounts {
+        if page == .openWith {
+            let enabledApps = applications.applications.filter(
+                applications.isEnabled
+            ).count
+            return FeatureCounts(
+                enabled: enabledApps,
+                available: applications.applications.count
+            )
+        }
+        return FeatureCounts(
+            enabled: toolbox.enabledCount(in: page.actions),
+            available: toolbox.availableCount(in: page.actions)
+        )
+    }
+}
+
+private struct GroupSummaryCard: View {
+    let page: ToolboxPage
+    let counts: FeatureCounts
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: page.symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(ToolboxTheme.electricCyan)
+                .frame(width: 30, height: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(page.title)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(page.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(ToolboxTheme.secondaryText)
+            }
+            Spacer()
+            Text("\(counts.enabled) / \(counts.available)")
+                .font(.callout.monospacedDigit().weight(.medium))
+                .foregroundStyle(counts.enabled > 0 ? ToolboxTheme.electricCyan : .secondary)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct ToolboxActionListPage: View {
+    let page: ToolboxPage
+    @ObservedObject var model: ToolboxConfigurationModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            PageHeader(
-                title: "Super Right 工具箱",
-                subtitle: "把常用开发和文件动作放进 Finder 右键，同时保持菜单干净。"
+            ActionGroupHeader(
+                title: page.title,
+                subtitle: page.subtitle,
+                enabledCount: model.enabledCount(in: page.actions),
+                availableCount: model.availableCount(in: page.actions),
+                enableAll: { model.setEnabled(true, for: page.actions) },
+                disableAll: { model.setEnabled(false, for: page.actions) }
             )
 
-            HStack(spacing: 12) {
-                StatusPill(title: "Finder 扩展", value: "待启用", symbol: "puzzlepiece.extension")
-                StatusPill(title: "已启用动作", value: "2", symbol: "checkmark.circle")
-                StatusPill(title: "目录学习", value: "开启", symbol: "brain.head.profile")
-            }
+            ActionRowsContainer(actions: page.actions, model: model)
 
-            Text("功能概览")
-                .font(.headline)
-
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-                ActionCard(title: "打开方式", detail: "动态发现编辑器与终端", symbol: "macwindow", status: "接入中")
-                ActionCard(title: "新建文件", detail: "文本、Office 与自定义模板", symbol: "doc.badge.plus", status: "1 项启用")
-                ActionCard(title: "智能目录", detail: "固定、常用、最近与搜索", symbol: "folder.badge.gearshape", status: "开启")
-                ActionCard(title: "路径与 Git", detail: "安全路径与仓库上下文动作", symbol: "point.bottomleft.forward.to.point.topright.scurvepath", status: "1 项启用")
-                ActionCard(title: "文件工具", detail: "安全移动、复制与撤销", symbol: "wrench.and.screwdriver", status: "规划中")
-                ActionCard(title: "压缩解压", detail: "ZIP、tar 与 tar.gz", symbol: "archivebox", status: "规划中")
+            if let errorMessage = model.errorMessage {
+                ErrorLabel(message: errorMessage)
             }
         }
     }
 }
 
-private struct OpenWithPage: View {
-    @ObservedObject var model: ApplicationRegistryModel
+private struct ActionGroupHeader: View {
+    let title: String
+    let subtitle: String
+    let enabledCount: Int
+    let availableCount: Int
+    let enableAll: () -> Void
+    let disableAll: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .top) {
-                PageHeader(
-                    title: "打开方式",
-                    subtitle: "按 Bundle ID 识别 App；应用移动、升级或重装后仍能恢复配置。"
-                )
-                Spacer()
-                Button("重新扫描") {
-                    model.scan()
+        HStack(alignment: .top, spacing: 20) {
+            PageHeader(title: title, subtitle: subtitle)
+            Spacer()
+            VStack(alignment: .trailing, spacing: 10) {
+                Text("\(enabledCount) 已启用 / \(availableCount) 可用")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(ToolboxTheme.secondaryText)
+                HStack(spacing: 8) {
+                    Button("启用全部可用", action: enableAll)
+                        .disabled(availableCount == 0 || enabledCount == availableCount)
+                    Button("全部关闭", action: disableAll)
+                        .disabled(enabledCount == 0)
                 }
-                    .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
             }
+        }
+    }
+}
 
-            CalloutCard(
-                symbol: "sparkle.magnifyingglass",
-                title: "自动发现新安装的 App",
-                detail: "Zed、Cursor、Warp 等新应用会进入“可用应用”，由你决定是否加入 Finder 菜单。"
+private struct ActionRowsContainer: View {
+    let actions: [ToolboxAction]
+    @ObservedObject var model: ToolboxConfigurationModel
+    var onChange: ((ToolboxAction, Bool) -> Void)? = nil
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(actions.enumerated()), id: \.element) { index, action in
+                ToolboxActionRow(
+                    action: action,
+                    model: model,
+                    onChange: onChange
+                )
+                if index < actions.count - 1 {
+                    Divider().opacity(0.35)
+                }
+            }
+        }
+        .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ToolboxTheme.border, lineWidth: 1)
+        }
+    }
+}
+
+private struct ToolboxActionRow: View {
+    let action: ToolboxAction
+    @ObservedObject var model: ToolboxConfigurationModel
+    var onChange: ((ToolboxAction, Bool) -> Void)? = nil
+
+    private var isEnabled: Binding<Bool> {
+        Binding(
+            get: { action.isImplemented && model.isEnabled(action) },
+            set: { newValue in
+                model.setEnabled(newValue, for: action)
+                onChange?(action, newValue)
+            }
+        )
+    }
+
+    var body: some View {
+        Toggle(isOn: isEnabled) {
+            HStack(spacing: 12) {
+                Image(systemName: action.presentationSymbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(
+                        action.isImplemented
+                            ? ToolboxTheme.electricCyan
+                            : Color.secondary
+                    )
+                    .frame(width: 32, height: 32)
+                    .background(
+                        action.isImplemented
+                            ? ToolboxTheme.electricCyan.opacity(0.11)
+                            : Color.white.opacity(0.04),
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(action.presentationName)
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(action.presentationDescription)
+                        .font(.caption)
+                        .foregroundStyle(ToolboxTheme.secondaryText)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 16)
+                ActionStatusBadge(
+                    isImplemented: action.isImplemented,
+                    isEnabled: model.isEnabled(action)
+                )
+            }
+            .contentShape(Rectangle())
+        }
+        .toggleStyle(.switch)
+        .controlSize(.regular)
+        .disabled(!action.isImplemented)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+}
+
+private struct ActionStatusBadge: View {
+    let isImplemented: Bool
+    let isEnabled: Bool
+    var isBlockedByParent = false
+
+    private var title: String {
+        if !isImplemented { return "开发中" }
+        if isEnabled && isBlockedByParent { return "待总开关" }
+        return isEnabled ? "已启用" : "已关闭"
+    }
+
+    private var color: Color {
+        if !isImplemented { return .secondary }
+        if isEnabled && isBlockedByParent { return ToolboxTheme.secondaryText }
+        return isEnabled ? ToolboxTheme.electricCyan : ToolboxTheme.secondaryText
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .frame(minWidth: 52, alignment: .trailing)
+    }
+}
+
+private struct OpenWithPage: View {
+    @ObservedObject var toolbox: ToolboxConfigurationModel
+    @ObservedObject var applications: ApplicationRegistryModel
+
+    private var enabledCount: Int {
+        return applications.applications.filter(applications.isEnabled).count
+    }
+
+    private var availableCount: Int {
+        applications.applications.count
+    }
+
+    private var isMenuEnabled: Binding<Bool> {
+        Binding(
+            get: { toolbox.isEnabled(.openWith) },
+            set: { toolbox.setEnabled($0, for: .openWith) }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            ActionGroupHeader(
+                title: ToolboxPage.openWith.title,
+                subtitle: ToolboxPage.openWith.subtitle,
+                enabledCount: enabledCount,
+                availableCount: availableCount,
+                enableAll: enableAll,
+                disableAll: disableAll
             )
 
+            Toggle(isOn: isMenuEnabled) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("在 Finder 中显示应用动作")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("关闭时保留下面每个 App 的选择，重新开启即可恢复。")
+                        .font(.caption)
+                        .foregroundStyle(ToolboxTheme.secondaryText)
+                }
+            }
+            .toggleStyle(.switch)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(ToolboxTheme.border, lineWidth: 1)
+            }
+
+            HStack {
+                Text("应用")
+                    .font(.headline)
+                Spacer()
+                Button("重新扫描") {
+                    applications.scan()
+                }
+                Button {
+                    applications.chooseAndAddApplication()
+                } label: {
+                    Label("添加其他 App…", systemImage: "plus")
+                }
+            }
+
             VStack(spacing: 0) {
-                if model.applications.isEmpty {
+                if applications.applications.isEmpty {
                     ContentUnavailableView(
-                        "没有发现支持的 App",
+                        "没有发现可用 App",
                         systemImage: "app.dashed",
-                        description: Text("可以安装编辑器或终端，也可以手动选择任意 App。")
+                        description: Text("安装编辑器或终端，或手动选择任意 App。")
                     )
-                    .padding(24)
+                    .padding(26)
                 } else {
-                    ForEach(Array(model.applications.enumerated()), id: \.element.id) { index, application in
-                        ApplicationRow(
+                    ForEach(
+                        Array(applications.applications.enumerated()),
+                        id: \.element.id
+                    ) { index, application in
+                        ApplicationToggleRow(
                             application: application,
-                            isEnabled: Binding(
-                                get: { model.isEnabled(application) },
-                                set: { model.setEnabled($0, for: application) }
-                            )
+                            model: applications,
+                            isMenuEnabled: toolbox.isEnabled(.openWith)
                         )
-                        if index < model.applications.count - 1 {
-                            Divider().opacity(0.25)
+                        if index < applications.applications.count - 1 {
+                            Divider().opacity(0.35)
                         }
                     }
                 }
             }
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-
-            if let errorMessage = model.errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+            .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(ToolboxTheme.border, lineWidth: 1)
             }
 
-            Button {
-                model.chooseAndAddApplication()
-            } label: {
-                Label("添加其他 App…", systemImage: "plus")
+            if let errorMessage = applications.errorMessage ?? toolbox.errorMessage {
+                ErrorLabel(message: errorMessage)
             }
         }
+    }
+
+    private func enableAll() {
+        toolbox.setEnabled(true, for: ToolboxPage.openWith.actions)
+        for application in applications.applications {
+            applications.setEnabled(true, for: application)
+        }
+    }
+
+    private func disableAll() {
+        toolbox.setEnabled(false, for: ToolboxPage.openWith.actions)
+        disableApplications()
+    }
+
+    private func disableApplications() {
+        for application in applications.applications {
+            applications.setEnabled(false, for: application)
+        }
+    }
+}
+
+private struct ApplicationToggleRow: View {
+    let application: DetectedApplication
+    @ObservedObject var model: ApplicationRegistryModel
+    let isMenuEnabled: Bool
+
+    private var isEnabled: Binding<Bool> {
+        Binding(
+            get: { model.isEnabled(application) },
+            set: { model.setEnabled($0, for: application) }
+        )
+    }
+
+    var body: some View {
+        Toggle(isOn: isEnabled) {
+            HStack(spacing: 12) {
+                Image(nsImage: NSWorkspace.shared.icon(
+                    forFile: application.currentApplicationURL.path
+                ))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(application.menuDisplayName)
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(application.bundleIdentifier)
+                        .font(.caption)
+                        .foregroundStyle(ToolboxTheme.secondaryText)
+                }
+                Spacer(minLength: 16)
+                ActionStatusBadge(
+                    isImplemented: true,
+                    isEnabled: model.isEnabled(application),
+                    isBlockedByParent: !isMenuEnabled
+                )
+            }
+            .contentShape(Rectangle())
+        }
+        .toggleStyle(.switch)
+        .controlSize(.regular)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 }
 
 private struct DirectoryLearningPage: View {
     @ObservedObject var model: DirectoryHistoryModel
+    @ObservedObject var toolbox: ToolboxConfigurationModel
     @AppStorage(SharedDefaults.directoryLearningEnabledKey, store: SharedDefaults.store)
     private var directoryLearningEnabled = true
     @State private var searchText = ""
     @State private var showsClearConfirmation = false
 
+    private var actions: [ToolboxAction] { ToolboxPage.directories.actions }
     private var sections: DirectoryHistorySections { model.sections }
-
-    private func matching(_ entries: [DirectoryHistoryEntry]) -> [DirectoryHistoryEntry] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return entries }
-        return entries.filter { entry in
-            entry.displayName.localizedStandardContains(query)
-                || entry.normalizedPath.localizedStandardContains(query)
-        }
+    private var learningToggle: Binding<Bool> {
+        Binding(
+            get: {
+                SharedDefaults.isAppGroupAvailable && directoryLearningEnabled
+            },
+            set: { isEnabled in
+                guard SharedDefaults.isAppGroupAvailable else { return }
+                directoryLearningEnabled = isEnabled
+            }
+        )
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            PageHeader(
-                title: "常用目录",
-                subtitle: "根据访问频率和最近使用时间，建立只保存在本机的快速目录列表。"
+        VStack(alignment: .leading, spacing: 22) {
+            ActionGroupHeader(
+                title: ToolboxPage.directories.title,
+                subtitle: ToolboxPage.directories.subtitle,
+                enabledCount: toolbox.enabledCount(in: actions),
+                availableCount: toolbox.availableCount(in: actions),
+                enableAll: { toolbox.setEnabled(true, for: actions) },
+                disableAll: { toolbox.setEnabled(false, for: actions) }
             )
 
-            Toggle(isOn: $directoryLearningEnabled) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("学习目录访问")
-                        .font(.headline)
-                    Text("不扫描目录内容、不联网；可以随时暂停、排除或清空。")
-                        .foregroundStyle(.secondary)
+            ActionRowsContainer(actions: actions, model: toolbox)
+
+            Text("本地学习")
+                .font(.headline)
+            Toggle(isOn: learningToggle) {
+                HStack(spacing: 12) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ToolboxTheme.electricCyan)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            ToolboxTheme.electricCyan.opacity(0.11),
+                            in: RoundedRectangle(cornerRadius: 8)
+                        )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("学习目录访问")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("路径、次数和时间只保存在本机；不扫描内容，也不联网。")
+                            .font(.caption)
+                            .foregroundStyle(ToolboxTheme.secondaryText)
+                    }
+                    Spacer()
+                    ActionStatusBadge(
+                        isImplemented: true,
+                        isEnabled: SharedDefaults.isAppGroupAvailable
+                            && directoryLearningEnabled
+                    )
                 }
+                .contentShape(Rectangle())
             }
             .toggleStyle(.switch)
-            .padding(18)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-
-            HStack(spacing: 14) {
-                ActionCard(title: "固定", detail: "手动保留的重要目录", symbol: "pin", status: "\(sections.pinned.count) 个")
-                ActionCard(title: "常用", detail: "默认显示得分最高的 8 个", symbol: "chart.line.uptrend.xyaxis", status: "\(sections.frequent.count) 个")
-                ActionCard(title: "最近", detail: "按最近访问时间快速返回", symbol: "clock", status: "\(sections.recent.count) 个")
+            .controlSize(.regular)
+            .disabled(!SharedDefaults.isAppGroupAvailable)
+            .help(
+                SharedDefaults.isAppGroupAvailable
+                    ? "暂停后保留现有固定、常用与最近目录"
+                    : "App Group 不可用，目录学习已关闭"
+            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(ToolboxTheme.border, lineWidth: 1)
             }
+
+            DirectorySummaryStrip(sections: sections)
 
             DirectorySectionList(
                 title: "固定",
@@ -329,21 +762,12 @@ private struct DirectoryLearningPage: View {
                 .disabled(model.history.entries.isEmpty)
             }
 
-            if let errorMessage = model.errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
+            if let errorMessage = model.errorMessage ?? toolbox.errorMessage {
+                ErrorLabel(message: errorMessage)
             }
-
-            CalloutCard(
-                symbol: "hand.raised",
-                title: "隐私边界",
-                detail: "只有目录路径、访问次数和时间保存在 App Group 数据中，数据不会离开这台 Mac。"
-            )
         }
-        .onAppear {
-            model.reload()
-        }
-        .searchable(text: $searchText, prompt: "搜索名称或路径")
+        .onAppear { model.reload() }
+        .searchable(text: $searchText, prompt: "搜索目录名称或路径")
         .confirmationDialog(
             "清空全部目录历史？",
             isPresented: $showsClearConfirmation,
@@ -354,6 +778,48 @@ private struct DirectoryLearningPage: View {
             }
         } message: {
             Text("固定、常用、最近和排除记录都会被删除，且无法撤销。")
+        }
+    }
+
+    private func matching(
+        _ entries: [DirectoryHistoryEntry]
+    ) -> [DirectoryHistoryEntry] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return entries }
+        return entries.filter { entry in
+            entry.displayName.localizedStandardContains(query)
+                || entry.normalizedPath.localizedStandardContains(query)
+        }
+    }
+}
+
+private struct DirectorySummaryStrip: View {
+    let sections: DirectoryHistorySections
+
+    var body: some View {
+        HStack(spacing: 12) {
+            summary("固定", count: sections.pinned.count, symbol: "pin.fill")
+            summary("常用", count: sections.frequent.count, symbol: "chart.line.uptrend.xyaxis")
+            summary("最近", count: sections.recent.count, symbol: "clock.fill")
+        }
+    }
+
+    private func summary(_ title: String, count: Int, symbol: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .foregroundStyle(ToolboxTheme.electricCyan)
+            Text(title)
+                .font(.callout.weight(.semibold))
+            Spacer()
+            Text("\(count)")
+                .font(.title3.bold())
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ToolboxTheme.border, lineWidth: 1)
         }
     }
 }
@@ -367,20 +833,19 @@ private struct DirectorySectionList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(title)
-                    .font(.headline)
+                Text(title).font(.headline)
                 Spacer()
                 Text("\(entries.count)")
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .font(.caption)
             }
 
             if entries.isEmpty {
                 Text("暂无目录")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(18)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(20)
+                    .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 14))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
@@ -390,11 +855,15 @@ private struct DirectorySectionList: View {
                             showsRestore: showsRestore
                         )
                         if index < entries.count - 1 {
-                            Divider().opacity(0.25)
+                            Divider().opacity(0.35)
                         }
                     }
                 }
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 14))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(ToolboxTheme.border, lineWidth: 1)
+                }
             }
         }
     }
@@ -408,17 +877,18 @@ private struct DirectoryHistoryRow: View {
     @State private var proposedName = ""
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: entry.isPinned ? "folder.fill.badge.minus" : "folder")
+        HStack(spacing: 14) {
+            Image(systemName: entry.isPinned ? "folder.fill" : "folder")
+                .font(.title3)
                 .foregroundStyle(ToolboxTheme.electricCyan)
-                .frame(width: 24)
+                .frame(width: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entry.displayName)
-                    .font(.headline)
+                    .font(.system(size: 14, weight: .semibold))
                 Text(entry.normalizedPath)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ToolboxTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -437,6 +907,7 @@ private struct DirectoryHistoryRow: View {
                 }
                 .buttonStyle(.borderless)
                 .help("在 Finder 中打开")
+                .accessibilityLabel("在 Finder 中打开 \(entry.displayName)")
 
                 Button {
                     model.togglePinned(entry)
@@ -445,6 +916,11 @@ private struct DirectoryHistoryRow: View {
                 }
                 .buttonStyle(.borderless)
                 .help(entry.isPinned ? "取消固定" : "固定")
+                .accessibilityLabel(
+                    entry.isPinned
+                        ? "取消固定 \(entry.displayName)"
+                        : "固定 \(entry.displayName)"
+                )
             }
 
             Menu {
@@ -469,8 +945,8 @@ private struct DirectoryHistoryRow: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
         .alert("重命名目录", isPresented: $showsRenameDialog) {
             TextField("显示名称", text: $proposedName)
             Button("取消", role: .cancel) {}
@@ -486,176 +962,185 @@ private struct DirectoryHistoryRow: View {
     }
 }
 
-private struct FeaturePage: View {
-    let title: String
-    let subtitle: String
-    let features: [(String, String, String)]
-
-    private let columns = [GridItem(.adaptive(minimum: 230), spacing: 14)]
+private struct GeneralSettingsPage: View {
+    @ObservedObject var toolbox: ToolboxConfigurationModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            PageHeader(title: title, subtitle: subtitle)
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-                ForEach(Array(features.enumerated()), id: \.offset) { _, feature in
-                    ActionCard(title: feature.0, detail: "Finder 右键动作", symbol: feature.1, status: feature.2)
-                }
-            }
-        }
-    }
-}
-
-private struct GeneralSettingsPage: View {
-    @AppStorage("finderExtensionEnabled", store: SharedDefaults.store)
-    private var finderExtensionEnabled = true
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
             PageHeader(
                 title: "设置",
-                subtitle: "管理 Finder 扩展、菜单配置和按需文件权限。"
+                subtitle: "管理 Finder 扩展、快速配置与按需文件权限。"
             )
 
-            GroupBox("Finder 右键菜单") {
+            GroupBox("Finder 扩展") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("启用 Super Right 菜单", isOn: $finderExtensionEnabled)
-                    Text("需要在系统设置的“登录项与扩展”中允许 Finder 扩展。")
-                        .foregroundStyle(.secondary)
+                    LabeledContent("启用状态") {
+                        Text("由 macOS 系统设置管理")
+                            .foregroundStyle(ToolboxTheme.secondaryText)
+                    }
+                    Text("Magic Right 不会用 App 内开关伪装系统扩展状态。")
+                        .font(.callout)
+                        .foregroundStyle(ToolboxTheme.secondaryText)
                     Button("打开扩展设置") {
-                        guard let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else { return }
+                        guard let url = URL(
+                            string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+                        ) else { return }
                         NSWorkspace.shared.open(url)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(6)
+                .padding(4)
+            }
+            .groupBoxStyle(GraphiteGroupBoxStyle())
+
+            GroupBox("快速配置") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("预设只影响内置动作；新发现的 App 始终由你单独选择。")
+                        .foregroundStyle(ToolboxTheme.secondaryText)
+                    HStack {
+                        Button("开发") { toolbox.apply(.developer) }
+                        Button("文件") { toolbox.apply(.file) }
+                        Button("全部内置") { toolbox.apply(.all) }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(4)
             }
             .groupBoxStyle(GraphiteGroupBoxStyle())
 
             GroupBox("权限原则") {
-                Text("Super Right 只在实际需要时请求目录访问，不会在首次启动时要求完全磁盘访问。")
-                    .foregroundStyle(.secondary)
+                Text("Magic Right 只在实际需要时请求目录访问，不会在首次启动时要求完全磁盘访问。")
+                    .foregroundStyle(ToolboxTheme.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(6)
+                    .padding(4)
             }
             .groupBoxStyle(GraphiteGroupBoxStyle())
-        }
-    }
-}
 
-private struct StatusPill: View {
-    let title: String
-    let value: String
-    let symbol: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol)
-                .foregroundStyle(ToolboxTheme.electricCyan)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.caption).foregroundStyle(.secondary)
-                Text(value).font(.headline)
+            if let errorMessage = toolbox.errorMessage {
+                ErrorLabel(message: errorMessage)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.thinMaterial, in: Capsule())
-    }
-}
-
-private struct ActionCard: View {
-    let title: String
-    let detail: String
-    let symbol: String
-    let status: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: symbol)
-                    .font(.title2)
-                    .foregroundStyle(ToolboxTheme.electricCyan)
-                Spacer()
-                Text(status)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(status == "规划中" ? .secondary : ToolboxTheme.electricCyan)
-            }
-            Text(title).font(.headline)
-            Text(detail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, minHeight: 98, alignment: .topLeading)
-        .padding(16)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(ToolboxTheme.electricCyan.opacity(0.12), lineWidth: 1)
-        }
-    }
-}
-
-private struct CalloutCard: View {
-    let symbol: String
-    let title: String
-    let detail: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: symbol)
-                .font(.title2)
-                .foregroundStyle(ToolboxTheme.electricCyan)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline)
-                Text(detail).font(.callout).foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(ToolboxTheme.electricCyan.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(ToolboxTheme.electricCyan.opacity(0.2), lineWidth: 1)
-        }
-    }
-}
-
-private struct ApplicationRow: View {
-    let application: DetectedApplication
-    @Binding var isEnabled: Bool
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: application.currentApplicationURL.path))
-                .resizable()
-                .scaledToFit()
-                .frame(width: 36, height: 36)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(application.menuDisplayName).font(.headline)
-                Text(application.bundleIdentifier).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Toggle("", isOn: $isEnabled)
-                .labelsHidden()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 }
 
 private struct GraphiteGroupBoxStyle: GroupBoxStyle {
     func makeBody(configuration: Configuration) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             configuration.label
                 .font(.headline)
             configuration.content
         }
-        .padding(16)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .padding(18)
+        .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ToolboxTheme.border, lineWidth: 1)
+        }
+    }
+}
+
+private struct ErrorLabel: View {
+    let message: String
+
+    var body: some View {
+        Label(message, systemImage: "exclamationmark.triangle.fill")
+            .foregroundStyle(.orange)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private extension ToolboxAction {
+    var presentationName: String {
+        switch self {
+        case .newFile: "新建文件（旧配置）"
+        case .newMarkdown: "Markdown 文件"
+        case .newPlainText: "文本文件"
+        case .newRichText: "富文本文件"
+        case .newXML: "XML 文件"
+        case .newJSON: "JSON 文件"
+        case .newYAML: "YAML 文件"
+        case .newGitignore: ".gitignore"
+        case .moveTo: "移动到"
+        case .copyTo: "复制到"
+        case .cut: "剪切"
+        case .paste: "粘贴"
+        case .frequentDirectories: "在菜单中显示常用目录"
+        case .archive: "压缩"
+        case .unarchive: "解压"
+        case .openWith: "在菜单中显示打开方式"
+        case .copyAbsolutePath: "复制绝对路径"
+        case .copyShellPath: "复制 Shell 安全路径"
+        case .copyFileURL: "复制 file:// URL"
+        case .copyGitRelativePath: "复制 Git 相对路径"
+        case .openGitRoot: "打开 Git 根目录"
+        case .openGitRootInEditor: "在编辑器中打开仓库"
+        case .openOrigin: "打开 origin 页面"
+        case .copyOriginURL: "复制 origin URL"
+        case .fileInfo: "文件信息"
+        case .createAlias: "创建替身"
+        }
+    }
+
+    var presentationDescription: String {
+        switch self {
+        case .newFile: "旧版总开关，仅用于迁移历史设置。"
+        case .newMarkdown: "创建空白 .md 文件并自动避让重名。"
+        case .newPlainText: "创建空白 .txt 文件并在 Finder 中选中。"
+        case .newRichText: "创建可被文本编辑器打开的有效 .rtf 文件。"
+        case .newXML: "创建包含声明和根节点的有效 XML 文件。"
+        case .newJSON: "创建有效的空 JSON 对象。"
+        case .newYAML: "创建有效的 YAML 文档。"
+        case .newGitignore: "创建隐藏的 .gitignore，已存在时安全编号。"
+        case .moveTo: "移动到常用或自定义目录，并保留可撤销记录。"
+        case .copyTo: "复制到目标目录，不静默覆盖已有文件。"
+        case .cut: "把所选项目放入 Magic Right 剪贴板。"
+        case .paste: "在当前目录安全粘贴已剪切项目。"
+        case .frequentDirectories: "显示固定、常用和最近目录子菜单。"
+        case .archive: "使用系统 ZIP 或 tar.gz 格式压缩。"
+        case .unarchive: "验证归档路径后解压到安全目录。"
+        case .openWith: "显示已启用的编辑器、终端和开发工具。"
+        case .copyAbsolutePath: "复制所选文件或目录的完整路径。"
+        case .copyShellPath: "复制经过单引号转义的安全命令行路径。"
+        case .copyFileURL: "复制百分号编码的本地 file URL。"
+        case .copyGitRelativePath: "复制相对于当前仓库根目录的路径。"
+        case .openGitRoot: "在 Finder 中定位当前仓库根目录。"
+        case .openGitRootInEditor: "用首选编辑器打开整个仓库。"
+        case .openOrigin: "在浏览器打开当前仓库的远程页面。"
+        case .copyOriginURL: "复制仓库 origin 的远程 URL。"
+        case .fileInfo: "查看类型、大小、时间和按需哈希。"
+        case .createAlias: "为所选项目创建 Finder 替身。"
+        }
+    }
+
+    var presentationSymbol: String {
+        switch self {
+        case .newFile, .newMarkdown, .newPlainText: "doc.badge.plus"
+        case .newRichText: "doc.richtext"
+        case .newXML: "chevron.left.forwardslash.chevron.right"
+        case .newJSON, .newYAML: "curlybraces"
+        case .newGitignore: "eye.slash"
+        case .moveTo: "folder.badge.minus"
+        case .copyTo: "folder.badge.plus"
+        case .cut: "scissors"
+        case .paste: "doc.on.clipboard"
+        case .frequentDirectories: "folder.badge.gearshape"
+        case .archive: "archivebox"
+        case .unarchive: "arrow.down.doc"
+        case .openWith: "macwindow"
+        case .copyAbsolutePath: "link"
+        case .copyShellPath: "terminal"
+        case .copyFileURL: "doc.on.doc"
+        case .copyGitRelativePath: "point.bottomleft.forward.to.point.topright.scurvepath"
+        case .openGitRoot: "folder"
+        case .openGitRootInEditor: "curlybraces.square"
+        case .openOrigin: "network"
+        case .copyOriginURL: "link.badge.plus"
+        case .fileInfo: "info.circle"
+        case .createAlias: "arrowshape.turn.up.right"
         }
     }
 }

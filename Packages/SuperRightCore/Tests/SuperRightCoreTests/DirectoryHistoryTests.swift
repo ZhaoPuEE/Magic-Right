@@ -97,6 +97,66 @@ struct DirectoryHistoryTests {
         ) - 0.25) < 0.000_000_1)
     }
 
+    @Test("A new visit does not make all old visits recent again")
+    func newVisitOnlyAddsItsOwnWeight() throws {
+        let directory = URL(fileURLWithPath: "/tmp/aged-frequency", isDirectory: true)
+        let policy = DirectoryHistoryPolicy(deduplicationInterval: 0)
+        let halfLife = policy.scoreHalfLife
+        var history = DirectoryHistory(policy: policy)
+
+        for _ in 0..<10 {
+            history.recordVisit(to: directory, dwellDuration: 2, at: referenceDate)
+        }
+
+        let twoHalfLivesLater = referenceDate.addingTimeInterval(2 * halfLife)
+        #expect(history.recordVisit(
+            to: directory,
+            dwellDuration: 2,
+            at: twoHalfLivesLater
+        ) == .countedVisit)
+
+        let entry = try #require(history.entry(for: directory))
+        #expect(entry.visitCount == 11)
+        #expect(abs(entry.score(at: twoHalfLivesLater, halfLife: halfLife) - 3.5) < 0.000_000_1)
+    }
+
+    @Test("Legacy history migrates without reviving old visit weight")
+    func legacyScoreMigration() throws {
+        let directory = URL(fileURLWithPath: "/tmp/legacy-frequency", isDirectory: true)
+        let policy = DirectoryHistoryPolicy(deduplicationInterval: 0)
+        let halfLife = policy.scoreHalfLife
+        var original = DirectoryHistory(policy: policy)
+        for _ in 0..<8 {
+            original.recordVisit(to: directory, dwellDuration: 2, at: referenceDate)
+        }
+
+        let encoded = try JSONEncoder().encode(original)
+        var root = try #require(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        var entries = try #require(root["entries"] as? [[String: Any]])
+        entries[0].removeValue(forKey: "decayedVisitScore")
+        entries[0].removeValue(forKey: "scoreUpdatedAt")
+        root["entries"] = entries
+        let legacyData = try JSONSerialization.data(withJSONObject: root)
+
+        var decoded = try DirectoryHistory.decodeStoredData(legacyData)
+        let twoHalfLivesLater = referenceDate.addingTimeInterval(2 * halfLife)
+        decoded.recordVisit(to: directory, dwellDuration: 2, at: twoHalfLivesLater)
+
+        let entry = try #require(decoded.entry(for: directory))
+        #expect(entry.visitCount == 9)
+        #expect(abs(entry.score(at: twoHalfLivesLater, halfLife: halfLife) - 3) < 0.000_000_1)
+    }
+
+    @Test("Stored history distinguishes absence from corrupt data")
+    func storedDataDecodeIsFailClosed() throws {
+        #expect(try DirectoryHistory.decodeStoredData(nil).entries.isEmpty)
+        #expect(throws: DecodingError.self) {
+            try DirectoryHistory.decodeStoredData(Data("not-json".utf8))
+        }
+    }
+
     @Test("Frequent directories default to the top eight")
     func frequentTopEight() {
         let policy = DirectoryHistoryPolicy(deduplicationInterval: 0)

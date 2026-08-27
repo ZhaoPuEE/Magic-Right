@@ -1,6 +1,6 @@
 import Foundation
 
-/// How Super Right should translate an open intent for an application.
+/// How Magic Right should translate an open intent for an application.
 ///
 /// Application identity is always the bundle identifier. The adapter only
 /// describes launch behavior and never contains a persisted application path.
@@ -17,7 +17,7 @@ public enum ApplicationDescriptorSource: String, Codable, Hashable, Sendable {
     case manuallyAdded
 }
 
-/// Persistable metadata for an application Super Right knows how to offer.
+/// Persistable metadata for an application Magic Right knows how to offer.
 ///
 /// Do not add an application URL to this type. Applications can be moved or
 /// reinstalled, so their current URL must be resolved through Launch Services.
@@ -58,7 +58,7 @@ public struct LocatedApplication: Hashable, Sendable {
     }
 }
 
-/// An installed application combined with Super Right's launch metadata.
+/// An installed application combined with Magic Right's launch metadata.
 ///
 /// `currentApplicationURL` is intentionally ephemeral and must not be used as
 /// persisted application identity.

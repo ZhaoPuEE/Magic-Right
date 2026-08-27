@@ -1,17 +1,24 @@
 import AppKit
 import FinderSync
+import OSLog
 import SuperRightCore
 
 final class FinderSync: FIFinderSync {
     private enum Constants {
-        static let hostBundleIdentifier = "dev.superright.app"
-        static let appGroupSuiteName = "group.dev.superright.app"
+        static let hostBundleIdentifier = "dev.magicright.app"
+        static let appGroupSuiteName = "group.dev.magicright.app"
         static let applicationPreferencesKey = "applicationPreferences.v1"
         static let directoryHistoryKey = "directoryHistory.v1"
         static let directoryLearningEnabledKey = "directoryLearningEnabled"
+        static let toolboxConfigurationKey = "toolboxConfiguration.v1"
     }
 
     private var observationStartDates: [String: Date] = [:]
+    private let observationLock = NSLock()
+    private let historyLogger = Logger(
+        subsystem: Constants.hostBundleIdentifier,
+        category: "DirectoryHistory"
+    )
 
     override init() {
         super.init()
@@ -25,12 +32,17 @@ final class FinderSync: FIFinderSync {
 
     override func beginObservingDirectory(at url: URL) {
         guard isDirectoryLearningEnabled else { return }
+        observationLock.lock()
         observationStartDates[DirectoryPathIdentity.normalize(url)] = Date()
+        observationLock.unlock()
     }
 
     override func endObservingDirectory(at url: URL) {
         let identity = DirectoryPathIdentity.normalize(url)
-        guard let startedAt = observationStartDates.removeValue(forKey: identity),
+        observationLock.lock()
+        let startedAt = observationStartDates.removeValue(forKey: identity)
+        observationLock.unlock()
+        guard let startedAt,
               isDirectoryLearningEnabled else { return }
 
         recordDirectoryVisit(
@@ -40,15 +52,24 @@ final class FinderSync: FIFinderSync {
     }
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu? {
-        let menu = NSMenu(title: "Super Right")
-        let rootItem = NSMenuItem(title: "Super Right", action: nil, keyEquivalent: "")
-        let rootMenu = NSMenu(title: "Super Right")
+        let menu = NSMenu(title: "Magic Right")
+        let rootItem = NSMenuItem(title: "Magic Right", action: nil, keyEquivalent: "")
+        let rootMenu = NSMenu(title: "Magic Right")
+        let configuration = loadToolboxConfiguration()
 
-        rootMenu.addItem(newFileMenuItem())
-        rootMenu.addItem(directoryMenuItem())
-        rootMenu.addItem(openWithMenuItem())
-        rootMenu.addItem(toolsMenuItem())
-        rootMenu.addItem(.separator())
+        let availableMenuItems = [
+            newFileMenuItem(configuration: configuration),
+            directoryMenuItem(configuration: configuration),
+            openWithMenuItem(configuration: configuration),
+            toolsMenuItem(configuration: configuration)
+        ].compactMap { $0 }
+
+        for item in availableMenuItems {
+            rootMenu.addItem(item)
+        }
+        if !availableMenuItems.isEmpty {
+            rootMenu.addItem(.separator())
+        }
 
         let settingsItem = NSMenuItem(
             title: "设置…",
@@ -63,13 +84,25 @@ final class FinderSync: FIFinderSync {
         return menu
     }
 
-    private func newFileMenuItem() -> NSMenuItem {
+    private func newFileMenuItem(
+        configuration: ToolboxConfiguration
+    ) -> NSMenuItem? {
+        let preferences = configuration.enabledActions(in: .newFile)
+            .compactMap { preference -> (ToolboxActionPreference, NewFilePreset)? in
+                guard let preset = preference.action.newFilePreset else { return nil }
+                return (preference, preset)
+            }
+        guard !preferences.isEmpty else { return nil }
+
         let rootItem = NSMenuItem(title: "新建文件", action: nil, keyEquivalent: "")
         let menu = NSMenu(title: "新建文件")
 
-        for preset in NewFilePreset.allCases {
+        for (preference, preset) in preferences {
             let item = NSMenuItem(
-                title: displayName(for: preset),
+                title: configuredTitle(
+                    preference.customName,
+                    fallback: displayName(for: preset)
+                ),
                 action: #selector(createNewFile(_:)),
                 keyEquivalent: ""
             )
@@ -86,7 +119,11 @@ final class FinderSync: FIFinderSync {
         return rootItem
     }
 
-    private func directoryMenuItem() -> NSMenuItem {
+    private func directoryMenuItem(
+        configuration: ToolboxConfiguration
+    ) -> NSMenuItem? {
+        guard isEnabled(.frequentDirectories, in: configuration) else { return nil }
+
         let rootItem = NSMenuItem(title: "目录", action: nil, keyEquivalent: "")
         let menu = NSMenu(title: "目录")
         let sections = loadDirectoryHistory().sections(
@@ -108,62 +145,55 @@ final class FinderSync: FIFinderSync {
         return rootItem
     }
 
-    private func openWithMenuItem() -> NSMenuItem {
+    private func openWithMenuItem(
+        configuration: ToolboxConfiguration
+    ) -> NSMenuItem? {
+        guard isEnabled(.openWith, in: configuration) else { return nil }
+
         let rootItem = NSMenuItem(title: "打开方式", action: nil, keyEquivalent: "")
         let menu = NSMenu(title: "打开方式")
         let enabledApplications = applicationRegistry().visibleEnabledApplications()
+        guard !enabledApplications.isEmpty else { return nil }
 
-        if enabledApplications.isEmpty {
-            let emptyItem = NSMenuItem(title: "尚未启用 App", action: nil, keyEquivalent: "")
-            emptyItem.isEnabled = false
-            menu.addItem(emptyItem)
-        } else {
-            for application in enabledApplications {
-                let item = NSMenuItem(
-                    title: "在 \(application.menuDisplayName) 中打开",
-                    action: #selector(openSelectionInApplication(_:)),
-                    keyEquivalent: ""
-                )
-                item.target = self
-                item.representedObject = application.bundleIdentifier
+        for application in enabledApplications {
+            let item = NSMenuItem(
+                title: "在 \(application.menuDisplayName) 中打开",
+                action: #selector(openSelectionInApplication(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = application.bundleIdentifier
 
-                let icon = NSWorkspace.shared.icon(
-                    forFile: application.currentApplicationURL.path
-                )
-                icon.size = NSSize(width: 16, height: 16)
-                item.image = icon
-                menu.addItem(item)
-            }
-            menu.addItem(.separator())
+            let icon = NSWorkspace.shared.icon(
+                forFile: application.currentApplicationURL.path
+            )
+            icon.size = NSSize(width: 16, height: 16)
+            item.image = icon
+            menu.addItem(item)
         }
-
-        let configureItem = NSMenuItem(
-            title: "配置打开方式…",
-            action: #selector(openHostSettings),
-            keyEquivalent: ""
-        )
-        configureItem.target = self
-        menu.addItem(configureItem)
 
         rootItem.submenu = menu
         return rootItem
     }
 
-    private func toolsMenuItem() -> NSMenuItem {
+    private func toolsMenuItem(
+        configuration: ToolboxConfiguration
+    ) -> NSMenuItem? {
+        let preferences = configuration.enabledActions(in: .tools)
+        guard !preferences.isEmpty else { return nil }
+
         let rootItem = NSMenuItem(title: "工具", action: nil, keyEquivalent: "")
         let menu = NSMenu(title: "工具")
 
-        let actions: [(String, Selector)] = [
-            ("复制绝对路径", #selector(copyAbsolutePaths)),
-            ("复制 file:// URL", #selector(copyFileURLs)),
-            ("复制 Shell 安全路径", #selector(copyShellSafePaths))
-        ]
-        for (title, action) in actions {
-            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        for preference in preferences {
+            guard let tool = implementedTool(for: preference.action) else { continue }
+            let title = configuredTitle(preference.customName, fallback: tool.title)
+            let item = NSMenuItem(title: title, action: tool.selector, keyEquivalent: "")
             item.target = self
             menu.addItem(item)
         }
 
+        guard !menu.items.isEmpty else { return nil }
         rootItem.submenu = menu
         return rootItem
     }
@@ -202,6 +232,7 @@ final class FinderSync: FIFinderSync {
     @objc private func createNewFile(_ sender: NSMenuItem) {
         guard let rawValue = sender.representedObject as? String,
               let preset = NewFilePreset(rawValue: rawValue),
+              isToolboxActionEnabled(preset.toolboxAction),
               let destinationDirectory = newFileDestinationDirectory() else {
             NSSound.beep()
             return
@@ -221,7 +252,8 @@ final class FinderSync: FIFinderSync {
     }
 
     @objc private func openLearnedDirectory(_ sender: NSMenuItem) {
-        guard let path = sender.representedObject as? String else { return }
+        guard isToolboxActionEnabled(.frequentDirectories),
+              let path = sender.representedObject as? String else { return }
         let url = URL(fileURLWithPath: path, isDirectory: true)
         guard directoryExists(url) else { return }
 
@@ -233,10 +265,12 @@ final class FinderSync: FIFinderSync {
     }
 
     @objc private func copyAbsolutePaths() {
+        guard isToolboxActionEnabled(.copyAbsolutePath) else { return }
         writeToPasteboard(targetURLs().map(\.path).joined(separator: "\n"))
     }
 
     @objc private func copyFileURLs() {
+        guard isToolboxActionEnabled(.copyFileURL) else { return }
         writeToPasteboard(
             targetURLs()
                 .map(\.absoluteString)
@@ -245,6 +279,7 @@ final class FinderSync: FIFinderSync {
     }
 
     @objc private func copyShellSafePaths() {
+        guard isToolboxActionEnabled(.copyShellPath) else { return }
         writeToPasteboard(
             targetURLs()
                 .map { shellQuoted($0.path) }
@@ -253,24 +288,28 @@ final class FinderSync: FIFinderSync {
     }
 
     @objc private func openHostSettings() {
-        guard let appURL = NSWorkspace.shared.urlForApplication(
+        guard let settingsURL = URL(string: "magicright://settings"),
+              let appURL = NSWorkspace.shared.urlForApplication(
             withBundleIdentifier: Constants.hostBundleIdentifier
         ) else { return }
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
-        NSWorkspace.shared.openApplication(
-            at: appURL,
+        NSWorkspace.shared.open(
+            [settingsURL],
+            withApplicationAt: appURL,
             configuration: configuration,
             completionHandler: nil
         )
     }
 
     @objc private func openSelectionInApplication(_ sender: NSMenuItem) {
-        guard let bundleIdentifier = sender.representedObject as? String else { return }
+        guard isToolboxActionEnabled(.openWith),
+              let bundleIdentifier = sender.representedObject as? String else { return }
 
         let registry = applicationRegistry()
-        guard let descriptor = registry.descriptor(
+        guard registry.preferences.isEnabled(bundleIdentifier: bundleIdentifier),
+              let descriptor = registry.descriptor(
             forBundleIdentifier: bundleIdentifier
         ) else { return }
 
@@ -336,19 +375,44 @@ final class FinderSync: FIFinderSync {
         dwellDuration: TimeInterval
     ) {
         guard isDirectoryLearningEnabled else { return }
-
-        var history = loadDirectoryHistory()
-        let result = history.recordVisit(
-            to: directoryURL,
-            dwellDuration: dwellDuration
-        )
-        guard result != .ignoredShortDwell,
-              let data = try? JSONEncoder().encode(history),
-              let defaults = UserDefaults(suiteName: Constants.appGroupSuiteName) else {
+        guard let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: Constants.appGroupSuiteName
+        ), let defaults = UserDefaults(suiteName: Constants.appGroupSuiteName) else {
             return
         }
 
-        defaults.set(data, forKey: Constants.directoryHistoryKey)
+        let lockURL = containerURL.appendingPathComponent(
+            "directory-history.lock",
+            isDirectory: false
+        )
+        do {
+            try CrossProcessFileLock.withLock(at: lockURL) {
+                defaults.synchronize()
+                let storedData = defaults.data(forKey: Constants.directoryHistoryKey)
+                var history: DirectoryHistory
+                do {
+                    history = try DirectoryHistory.decodeStoredData(storedData)
+                } catch {
+                    historyLogger.error(
+                        "Directory history decode failed; original data was preserved and this visit was not recorded: \(String(describing: error), privacy: .public)"
+                    )
+                    return
+                }
+
+                let result = history.recordVisit(
+                    to: directoryURL,
+                    dwellDuration: dwellDuration
+                )
+                guard result != .ignoredShortDwell else { return }
+                let data = try JSONEncoder().encode(history)
+                defaults.set(data, forKey: Constants.directoryHistoryKey)
+                defaults.synchronize()
+            }
+        } catch {
+            historyLogger.error(
+                "Directory history update failed; stored data was left unchanged: \(String(describing: error), privacy: .public)"
+            )
+        }
     }
 
     private func loadDirectoryHistory() -> DirectoryHistory {
@@ -356,11 +420,16 @@ final class FinderSync: FIFinderSync {
             return DirectoryHistory()
         }
         defaults.synchronize()
-        guard let data = defaults.data(forKey: Constants.directoryHistoryKey),
-              let history = try? JSONDecoder().decode(DirectoryHistory.self, from: data) else {
+        do {
+            return try DirectoryHistory.decodeStoredData(
+                defaults.data(forKey: Constants.directoryHistoryKey)
+            )
+        } catch {
+            historyLogger.error(
+                "Directory history decode failed while building the menu; original data was preserved: \(String(describing: error), privacy: .public)"
+            )
             return DirectoryHistory()
         }
-        return history
     }
 
     private func applicationRegistry() -> ApplicationRegistry<NSWorkspaceApplicationLocator> {
@@ -377,6 +446,62 @@ final class FinderSync: FIFinderSync {
             preferences: preferences,
             locator: NSWorkspaceApplicationLocator()
         )
+    }
+
+    private func loadToolboxConfiguration() -> ToolboxConfiguration {
+        guard FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: Constants.appGroupSuiteName
+        ) != nil,
+        let defaults = UserDefaults(suiteName: Constants.appGroupSuiteName) else {
+            return .allDisabled
+        }
+        defaults.synchronize()
+        guard let data = defaults.data(forKey: Constants.toolboxConfigurationKey) else {
+            return ToolboxConfiguration(preset: .developer)
+        }
+        guard let configuration = try? JSONDecoder().decode(
+                ToolboxConfiguration.self,
+                from: data
+              ) else {
+            return .allDisabled
+        }
+        return configuration
+    }
+
+    private func isToolboxActionEnabled(_ action: ToolboxAction) -> Bool {
+        isEnabled(action, in: loadToolboxConfiguration())
+    }
+
+    private func isEnabled(
+        _ action: ToolboxAction,
+        in configuration: ToolboxConfiguration
+    ) -> Bool {
+        action.isImplemented
+            && configuration.preference(for: action)?.isEnabled == true
+    }
+
+    private func implementedTool(
+        for action: ToolboxAction
+    ) -> (title: String, selector: Selector)? {
+        switch action {
+        case .copyAbsolutePath:
+            ("复制绝对路径", #selector(copyAbsolutePaths))
+        case .copyFileURL:
+            ("复制 file:// URL", #selector(copyFileURLs))
+        case .copyShellPath:
+            ("复制 Shell 安全路径", #selector(copyShellSafePaths))
+        default:
+            nil
+        }
+    }
+
+    private func configuredTitle(_ customName: String?, fallback: String) -> String {
+        guard let customName = customName?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ), !customName.isEmpty else {
+            return fallback
+        }
+        return customName
     }
 
     private func targetURLs() -> [URL] {

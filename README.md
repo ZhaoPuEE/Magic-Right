@@ -1,12 +1,12 @@
-# Super Right
+# Magic Right
 
 [简体中文](README.zh-CN.md)
 
-<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Super Right icon"></p>
+<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Magic Right icon"></p>
 
-Super Right is a native, open-source macOS utility that turns the Finder context menu into a practical launchpad for developers and everyday file work. It combines a lightweight Finder Sync extension with a menu bar app for configuration, permissions, history, and longer-running operations.
+Magic Right is an independent, native, open-source macOS utility that extends the Finder context menu for development and everyday file work. It combines a lightweight Finder Sync extension with a menu bar app for configuration, permissions, history, and longer-running operations.
 
-> Super Right is under active development. The items below describe the V1 product scope; there is no stable public release yet.
+> Magic Right is under active development. The items below describe the V1 product scope; there is no stable public release yet.
 
 ## Current prototype (0.1.0)
 
@@ -20,9 +20,9 @@ Implemented and source-verified today:
 - Absolute, `file://`, and shell-safe path copying.
 - Original AppIcon and menu bar template icon, source verification, and DMG packaging scripts.
 
-Office/custom templates, Git actions, move/copy/undo, archives, and file inspection remain later V1 work. The current test DMG is neither Developer ID signed nor notarized. Real Finder-extension installation, cross-process App Group sharing, and write access in arbitrary Finder locations still require a user-visible test after selecting a Personal Team in Xcode.
+Office/custom templates, Git actions, move/copy/undo, archives, and file inspection remain later V1 work. No Magic Right DMG is currently release-ready. Real Finder-extension installation, cross-process App Group sharing, and write access in arbitrary Finder locations still require a user-visible test with a valid development team and App Group provisioning in Xcode.
 
-## Why Super Right
+## Why Magic Right
 
 - Open a selected file or folder in Terminal, Tabby, Visual Studio Code, Zed, and other installed apps.
 - Discover newly installed apps dynamically instead of relying on hard-coded `/Applications` paths.
@@ -32,13 +32,15 @@ Office/custom templates, Git actions, move/copy/undo, archives, and file inspect
 - Keep risky work out of the Finder extension: file operations run in the host app, avoid silent overwrites, and retain a recoverable operation record.
 - Stay free and open source under the MIT License, without a subscription tier.
 
+The project is built around capabilities that remain useful beyond a static menu: local folder-frequency memory, context-aware action visibility, bundle-ID based discovery of newly installed apps, structured launches without shell-string evaluation, and recoverable file-operation contracts. Its source and local data model are designed to stay inspectable and extensible.
+
 ## Planned V1
 
 ### Open with any app
 
-Super Right stores applications by bundle identifier and resolves their current location with Launch Services when an action runs. A newly installed app such as Zed appears in Settings as available, but is not added to Finder until the user enables it. Uninstalled apps disappear from the menu; reinstalling the same bundle restores the previous preference.
+Magic Right stores applications by bundle identifier and resolves their current location with Launch Services when an action runs. A newly installed app such as Zed appears in Settings as available, but is not added to Finder until the user enables it. Uninstalled apps disappear from the menu; reinstalling the same bundle restores the previous preference.
 
-Known apps can use purpose-built, structured launch arguments. Other apps use the standard macOS open mechanism or a user-selected `.app`. Super Right does not execute user-provided shell command strings.
+Known apps can use purpose-built, structured launch arguments. Other apps use the standard macOS open mechanism or a user-selected `.app`. Magic Right does not execute user-provided shell command strings.
 
 ### Smart folders
 
@@ -59,7 +61,7 @@ Learning records folder paths and timestamps only. It does not enumerate folder 
 - ZIP, tar, and tar.gz creation; guarded extraction through a validated temporary location.
 - File information and on-demand hashes.
 
-Actions are organized into configurable groups: New File, Move To, Copy To, Folders, Archive, Open With, Git, and Tools. Groups can be reordered, renamed, kept inside one Super Right submenu, or promoted as selected high-frequency actions.
+Actions are organized into configurable groups: New File, Move To, Copy To, Folders, Archive, Open With, Git, and Tools. Groups can be reordered, renamed, kept inside one Magic Right submenu, or promoted as selected high-frequency actions.
 
 ### Toolbox control center
 
@@ -67,11 +69,11 @@ The host app is also the control center for the Finder experience. Its sidebar c
 
 Three starting presets make configuration quick without locking it down:
 
-- **Developer** emphasizes editors, terminals, paths, and Git.
+- **Developer** enables the application-action entry point, paths, and Git tools.
 - **File** emphasizes creation, destinations, archives, and safe file operations.
-- **All** enables the complete supported tool set.
+- **All** enables every supported built-in action.
 
-Applying a preset updates the editable configuration; it is not a permanent mode. Super Right may study the interaction patterns of established context-menu utilities, but its code, interface copy, icon, templates, and other brand assets must be original and must not reproduce a competitor's protected assets.
+Applying a preset updates the editable built-in configuration; it is not a permanent mode. Discovered external applications remain opt-in so installing a new editor never changes the Finder menu by itself. The shipped code, interface copy, icon, templates, and bundled assets are original or use a documented compatible license.
 
 ## Platform and design
 
@@ -79,9 +81,10 @@ Applying a preset updates the editable configuration; it is not a permanent mode
 - Swift 6, SwiftUI, and AppKit
 - A menu bar host app plus a Finder Sync extension
 - Shared state through an App Group
-- Local DMG distribution; Developer ID signing and notarization are required for public releases
+- Source and DMG distribution through GitHub Releases, not the Mac App Store
+- Developer ID signing and notarization are required before a public DMG is described as ready for ordinary users
 
-The original visual direction is a macOS rounded-square icon with graphite translucent glass, an electric-cyan accent, and three context-menu rows whose highlighted middle row contains `>_`. The menu bar uses a simplified monochrome template icon. The identity deliberately avoids mouse imagery, lightning bolts, and `SR` initials, and must be checked at 16 through 1024 pixels in light, dark, and system-tinted appearances before release.
+The app icon uses an original graphite-and-cyan context-menu composition. The menu bar icon is a separate monochrome template: a transparent mouse outline with the right button emphasized. Both assets must be checked at 16 through 1024 pixels, as applicable, in light, dark, and system-tinted appearances before release. Source notes live in [Design/ASSET_NOTES.md](Design/ASSET_NOTES.md).
 
 See [Architecture](docs/ARCHITECTURE.md), [Privacy](docs/PRIVACY.md), and [Permissions](docs/PERMISSIONS.md) for the product contracts behind these choices.
 
@@ -100,7 +103,7 @@ For detailed development signing, Finder extension setup, Release builds, DMG pa
 To package an already built app without overwriting an existing image:
 
 ```sh
-./scripts/create-dmg.sh "/path/to/Super Right.app" ./dist
+./scripts/create-dmg.sh "/path/to/Magic Right.app" ./dist
 ```
 
 The result contains the app and an `Applications` symlink for drag-and-drop installation. The script neither signs nor notarizes anything.
@@ -113,7 +116,7 @@ The result contains the app and an `Applications` symlink for drag-and-drop inst
 - User files are never silently overwritten.
 - Directory-learning data stays local and never inspects directory contents.
 - Build products, DMGs, certificates, credentials, and notarization profiles do not belong in Git.
-- Competitor behavior may inform product research, but implementation, wording, icons, and bundled assets must remain original.
+- Shipped implementation, wording, icons, templates, and bundled assets must be original or carry a documented compatible license.
 
 ## Contributing
 
@@ -123,4 +126,4 @@ See the [CHANGELOG](CHANGELOG.md) for version progress.
 
 ## License
 
-Super Right is available under the [MIT License](LICENSE).
+Magic Right is available under the [MIT License](LICENSE).

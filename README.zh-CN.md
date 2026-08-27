@@ -1,12 +1,12 @@
-# Super Right
+# Magic Right
 
 [English](README.md)
 
-<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Super Right 图标"></p>
+<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Magic Right 图标"></p>
 
-Super Right 是一款原生、开源的 macOS 工具，把 Finder 右键菜单变成面向开发工作和日常文件操作的快捷入口。它由轻量的 Finder Sync 扩展和菜单栏宿主 App 组成；设置、权限、历史记录以及耗时操作都由宿主 App 负责。
+Magic Right 是一款独立开发、原生、开源的 macOS Finder 右键功能扩展，面向开发工作和日常文件操作。它由轻量的 Finder Sync 扩展和菜单栏宿主 App 组成；设置、权限、历史记录以及耗时操作都由宿主 App 负责。
 
-> Super Right 正在开发中。下列内容是 V1 产品范围，目前尚无稳定公开版本。
+> Magic Right 正在开发中。下列内容是 V1 产品范围，目前尚无稳定公开版本。
 
 ## 当前原型（0.1.0）
 
@@ -20,9 +20,9 @@ Super Right 是一款原生、开源的 macOS 工具，把 Finder 右键菜单�
 - 复制绝对路径、`file://` URL 和 Shell 安全路径。
 - 原创 AppIcon、菜单栏 Template Icon、构建验证和 DMG 打包脚本。
 
-尚未实现的是 Office/自定义模板、Git 动作、移动/复制/撤销、压缩解压和文件信息等后续 V1 模块。当前测试 DMG 没有 Developer ID 签名或公证；Finder 扩展的真实安装、跨进程 App Group 和任意目录写入仍需在 Xcode 选择 Personal Team 后进行用户可见验证。
+尚未实现的是 Office/自定义模板、Git 动作、移动/复制/撤销、压缩解压和文件信息等后续 V1 模块。目前还没有可正式发布的 Magic Right DMG；Finder 扩展的真实安装、跨进程 App Group 和任意目录写入仍需在 Xcode 配置有效开发团队和 App Group 描述文件后进行用户可见验证。
 
-## 为什么做 Super Right
+## 为什么做 Magic Right
 
 - 在 Terminal、Tabby、Visual Studio Code、Zed 以及其他已安装 App 中打开选中的文件或目录。
 - 动态发现后来安装的 App，不依赖写死的 `/Applications` 路径。
@@ -32,13 +32,15 @@ Super Right 是一款原生、开源的 macOS 工具，把 Finder 右键菜单�
 - Finder 扩展只做轻量工作；文件操作交给宿主 App，禁止静默覆盖，并保留可恢复的操作记录。
 - 采用 MIT License，全部功能免费开源，不设置订阅墙。
 
+项目不只是维护一张静态菜单：它提供本地目录频率记忆、按选择上下文显示动作、按 Bundle ID 发现后来安装的 App、无需执行 Shell 字符串的结构化启动，以及可恢复的文件操作约束。源码和本地数据模型都保持可审计、可扩展。
+
 ## V1 计划
 
 ### 用任意 App 打开
 
-Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch Services 解析应用当前位置。以后新安装 Zed 等 App，会先出现在设置的“可用应用”中；只有用户启用后才进入 Finder 右键。App 卸载后会自动从菜单隐藏，以相同 Bundle ID 重装时可恢复原有设置。
+Magic Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch Services 解析应用当前位置。以后新安装 Zed 等 App，会先出现在设置的“可用应用”中；只有用户启用后才进入 Finder 右键。App 卸载后会自动从菜单隐藏，以相同 Bundle ID 重装时可恢复原有设置。
 
-已知 App 可以使用专门适配的结构化启动参数；其他 App 使用 macOS 标准打开机制，或由用户手工选择任意 `.app`。Super Right 不执行用户提供的 Shell 命令字符串。
+已知 App 可以使用专门适配的结构化启动参数；其他 App 使用 macOS 标准打开机制，或由用户手工选择任意 `.app`。Magic Right 不执行用户提供的 Shell 命令字符串。
 
 ### 智能常用目录
 
@@ -59,7 +61,7 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 - 创建 ZIP、tar、tar.gz；先在临时位置解压并通过路径安全校验。
 - 查看文件信息并按需计算哈希。
 
-动作按“新建文件、移动到、复制到、目录、压缩与解压、打开方式、Git、工具”分组。用户可开关、排序、改名，把动作收进统一的 Super Right 子菜单，也可将少量高频动作提到外层。
+动作按“新建文件、移动到、复制到、目录、压缩与解压、打开方式、Git、工具”分组。用户可开关、排序、改名，把动作收进统一的 Magic Right 子菜单，也可将少量高频动作提到外层。
 
 ### 工具箱控制中心
 
@@ -67,11 +69,11 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 
 首次配置提供三个可继续编辑的预设：
 
-- **Developer（开发）**：突出编辑器、终端、路径与 Git。
+- **Developer（开发）**：启用应用动作入口、路径与 Git 工具。
 - **File（文件）**：突出新建、目标目录、压缩和安全文件操作。
-- **All（全部）**：启用当前支持的完整工具集合。
+- **All（全部）**：启用当前支持的全部内置动作。
 
-应用预设只会更新可编辑配置，不会把用户锁进固定模式。Super Right 可以研究成熟右键工具的交互规律，但代码、界面文案、图标、模板和其他品牌资产必须原创，不复刻竞品受保护的资产。
+应用预设只会更新可编辑的内置配置，不会把用户锁进固定模式。新发现的外部 App 始终由用户主动选择，因此安装新编辑器不会自行改变 Finder 菜单。发布的代码、界面文案、图标、模板和内置资产必须原创，或使用有明确兼容许可证的资源。
 
 ## 平台与设计
 
@@ -79,9 +81,10 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 - Swift 6、SwiftUI 与 AppKit
 - 菜单栏宿主 App + Finder Sync 扩展
 - 通过 App Group 共享状态
-- 本地使用 DMG 分发；公开发行前必须完成 Developer ID 签名和 Apple 公证
+- 通过 GitHub Releases 发布源码和 DMG，不上架 Mac App Store
+- 在把公开 DMG 描述为适合普通用户安装前，必须完成 Developer ID 签名和 Apple 公证
 
-原创图标方向为 macOS 圆角方形：石墨灰半透明玻璃、电光青高亮、三行右键菜单，中间高亮行嵌入 `>_`。菜单栏使用简化的单色 Template Icon。品牌形象不使用鼠标、闪电或 `SR` 字母；发布前需检查 16 至 1024 像素、深浅色和系统着色状态。
+App 图标使用原创的石墨灰与电光青右键菜单构图；菜单栏图标采用独立的单色 Template Icon：透明鼠标轮廓，并着重显示右键区域。发布前需按各自用途检查小尺寸、深浅色和系统着色状态。素材来源记录见 [Design/ASSET_NOTES.md](Design/ASSET_NOTES.md)。
 
 产品约束详见[架构](docs/ARCHITECTURE.md)、[隐私](docs/PRIVACY.md)和[权限](docs/PERMISSIONS.md)。
 
@@ -100,7 +103,7 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 把已经构建的 App 打包成不会覆盖已有文件的 DMG：
 
 ```sh
-./scripts/create-dmg.sh "/path/to/Super Right.app" ./dist
+./scripts/create-dmg.sh "/path/to/Magic Right.app" ./dist
 ```
 
 产物内含 App 和指向 `/Applications` 的软链接，可拖拽安装。脚本不会处理签名或公证。
@@ -113,7 +116,7 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 - 绝不静默覆盖用户文件。
 - 目录学习数据只留在本机，且不读取目录内容。
 - 构建产物、DMG、证书、凭据和公证配置不得进入 Git。
-- 可以把竞品行为作为产品调研依据，但实现、文案、图标和内置资产必须保持原创。
+- 发布的实现、文案、图标、模板和内置资产必须原创，或具有明确兼容的许可证。
 
 ## 参与开发
 
@@ -123,4 +126,4 @@ Super Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch S
 
 ## 许可证
 
-Super Right 使用 [MIT License](LICENSE)。
+Magic Right 使用 [MIT License](LICENSE)。
