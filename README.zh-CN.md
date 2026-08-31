@@ -1,129 +1,142 @@
 # Magic Right
 
-[English](README.md)
+<p align="center">
+  <img src="Design/AppIcon-master.png" width="144" alt="Magic Right 图标">
+</p>
 
-<p align="center"><img src="Design/AppIcon-master.png" width="160" alt="Magic Right 图标"></p>
+<h3 align="center">轻量、开源的 macOS Finder 右键工具箱</h3>
 
-Magic Right 是一款独立开发、原生、开源的 macOS Finder 右键功能扩展，面向开发工作和日常文件操作。它由轻量的 Finder Sync 扩展和菜单栏宿主 App 组成；设置、权限、历史记录以及耗时操作都由宿主 App 负责。
+<p align="center">
+  在当前目录打开任意 App、记住常用目的地、使用系统文件剪贴板，<br>
+  让开发与日常文件操作都停留在一次右键之内。
+</p>
 
-> Magic Right 正在开发中。下列内容是 V1 产品范围，目前尚无稳定公开版本。
+<p align="center">
+  <img alt="macOS 15+" src="https://img.shields.io/badge/macOS-15%2B-111111?logo=apple">
+  <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
+  <img alt="MIT License" src="https://img.shields.io/badge/License-MIT-2563EB">
+</p>
 
-## 当前原型（0.1.0）
+<p align="center"><a href="README.md">English</a></p>
 
-已经实现并通过源码级验证：
+> **0.1.0 开源预览**：核心单元测试及 Debug / Release 编译已在 Apple Silicon Mac 上通过。公开 DMG 仍需有效 Developer ID 签名、Apple 公证及干净环境安装验收；当前请从源码构建，Intel Mac 尚未完成验证。
 
-- 原生菜单栏 App、工具箱设置界面和 Finder Sync 扩展工程。
-- 按 Bundle ID 动态发现常见编辑器、终端、IDE 和 Git 客户端，也可手工添加任意 `.app`。
-- Finder 中以结构化参数打开 Terminal、Tabby、Visual Studio Code、Zed 等 App。
-- Markdown、TXT、RTF、XML、JSON、YAML、`.gitignore` 七种安全新建预制，自动避让重名且绝不覆盖。
-- 本地智能目录：2 秒停留阈值、30 分钟去重、30 天半衰期，以及固定 / 常用 / 最近、搜索、改名、排除和清空。
-- 复制绝对路径、`file://` URL 和 Shell 安全路径。
-- 原创 AppIcon、菜单栏 Template Icon、构建验证和 DMG 打包脚本。
+## 一次右键，连接你的工作流
 
-尚未实现的是 Office/自定义模板、Git 动作、移动/复制/撤销、压缩解压和文件信息等后续 V1 模块。目前还没有可正式发布的 Magic Right DMG；Finder 扩展的真实安装、跨进程 App Group 和任意目录写入仍需在 Xcode 配置有效开发团队和 App Group 描述文件后进行用户可见验证。
+| 能力 | Magic Right 的做法 |
+| --- | --- |
+| **在 App 中打开** | 自动发现常用编辑器、终端、IDE 与 Git 客户端；也可以手动选择任意有效 `.app`。Magic Right 只保存 Bundle ID，App 移动或重装后仍能通过 Launch Services 找回。 |
+| **智能目录** | 本地学习 Finder 中实际访问的目录，以固定 / 常用 / 最近三组目的地同时服务“跳转到”“移动到”和“复制到”。不扫描目录内容，也不上传历史。 |
+| **系统文件剪贴板** | 剪切与复制使用 `NSPasteboard.general` 和标准 `public.file-url`，Finder、Deck 等兼容 macOS 文件 URL 的 App 都能读取，并非 Magic Right 私有剪贴板。 |
+| **Codex Here!** | Finder 始终保留一个入口；在设置中选择系统终端、Ghostty 或 Tabby，在当前目录直接进入本机 Codex。 |
+| **文件工具箱** | 安全新建七类开发文件、复制路径与 Git 信息、查看文件信息与 SHA-256、创建 ZIP、校验后解压，以及无静默覆盖的移动/复制。 |
 
-## 为什么做 Magic Right
+启用的动作直接平铺在 Finder 右键菜单第一级。只有需要继续选择文件类型或目的地的动作才展开自己的子菜单，不会把所有能力塞进一个总菜单。
 
-- 在 Terminal、Tabby、Visual Studio Code、Zed 以及其他已安装 App 中打开选中的文件或目录。
-- 动态发现后来安装的 App，不依赖写死的 `/Applications` 路径。
-- 在本地学习常用目录，提供“固定 / 常用 / 最近”三类快速入口。
-- 用内置或用户导入的模板创建真实文件，包括结构合法的 Office 文档。
-- 把路径、Git、压缩、移动、复制和文件检查等高频能力放到当前选择旁边。
-- Finder 扩展只做轻量工作；文件操作交给宿主 App，禁止静默覆盖，并保留可恢复的操作记录。
-- 采用 MIT License，全部功能免费开源，不设置订阅墙。
+## 界面
 
-项目不只是维护一张静态菜单：它提供本地目录频率记忆、按选择上下文显示动作、按 Bundle ID 发现后来安装的 App、无需执行 Shell 字符串的结构化启动，以及可恢复的文件操作约束。源码和本地数据模型都保持可审计、可扩展。
+Magic Right 是菜单栏 App，也是 Finder 功能控制中心。侧栏按应用动作、创建文件、智能目录、路径与仓库、文件操作和归档分区，每一项都可以独立进入或移出 Finder 菜单。
 
-## V1 计划
+<!-- 真机截图将在完成当前版本验收后写入 docs/images/control-center.png。 -->
 
-### 用任意 App 打开
+## 3 分钟开始使用
 
-Magic Right 通过 Bundle ID 记录应用，并在动作执行时通过 Launch Services 解析应用当前位置。以后新安装 Zed 等 App，会先出现在设置的“可用应用”中；只有用户启用后才进入 Finder 右键。App 卸载后会自动从菜单隐藏，以相同 Bundle ID 重装时可恢复原有设置。
+### 1. 从源码运行
 
-已知 App 可以使用专门适配的结构化启动参数；其他 App 使用 macOS 标准打开机制，或由用户手工选择任意 `.app`。Magic Right 不执行用户提供的 Shell 命令字符串。
+需要 **macOS 15 或更高版本**，以及带 macOS 15 SDK 的 Xcode；当前测试环境为 Apple Silicon Mac。
 
-### 智能常用目录
+```sh
+git clone https://github.com/ZhaoPuEE/Magic-Right.git
+cd Magic-Right
+open SuperRight.xcodeproj
+```
 
-菜单栏和 Finder 菜单提供三类本地列表：
+在 Xcode 中选择 `SuperRight` scheme 和 **My Mac**，运行一次宿主 App。
 
-- **固定**：用户明确固定的目录。
-- **常用**：根据访问频率和最近程度排序的目录。
-- **最近**：最近观察到的目录。
+### 2. 启用 Finder 扩展
 
-目录学习只记录路径和时间，不遍历目录内容，也不会把历史发送到 Mac 之外。用户可以暂停学习、排除路径、改名或固定条目、删除单条记录，或清空完整历史。
+打开 Magic Right → **偏好设置** → **打开扩展设置**，在 macOS 系统设置中启用 Magic Right Finder 扩展。菜单栏宿主运行时，Finder 才会显示 Magic Right 动作；退出宿主后，菜单会自动消失。
 
-### Finder 动作
+### 3. 选择你的动作
 
-- 新建 Markdown、文本、RTF、XML、JSON、YAML、`.gitignore`、DOCX、XLSX、PPTX，以及自定义模板文件。
-- 复制绝对路径、Shell 安全路径、`file://` URL 和 Git 根目录相对路径。
-- 打开 Git 仓库根目录和远程页面；仅在适用的目录显示 Git 动作。
-- 防冲突的移动/复制目标，以及撤销最近一次移动。
-- 创建 ZIP、tar、tar.gz；先在临时位置解压并通过路径安全校验。
-- 查看文件信息并按需计算哈希。
+- 在**应用动作**中启用已发现的 App，或点击添加按钮手动注册任意有效 `.app`。
+- 在 **Codex Here!** 中选择系统终端、Ghostty 或 Tabby。
+- 在**智能目录**中固定、改名、排除或清空目的地。
+- 使用“开发”“文件”或“全部内置”预设快速开始，再逐项调整。
+- 可选启用“登录时自动启动”；默认关闭。
 
-动作按“新建文件、移动到、复制到、目录、压缩与解压、打开方式、Git、工具”分组。用户可开关、排序、改名，把动作收进统一的 Magic Right 子菜单，也可将少量高频动作提到外层。
+## 核心能力
 
-### 工具箱控制中心
+### 在当前路径打开任意 App
 
-宿主 App 同时是 Finder 功能的控制中心，侧栏包含**总览、打开方式、新建文件与模板、常用目录、路径与 Git、文件工具、压缩与解压、设置**。每项能力都可启用、排序、改名，并单独决定是否进入 Finder 菜单。
+内置适配按 Bundle ID 自动发现常见 App。手动添加时，Magic Right 接受具有可读 Bundle 元数据的有效 `.app`，保存它的 Bundle ID，并在每次使用时通过 Launch Services 解析当前位置。
 
-首次配置提供三个可继续编辑的预设：
+Terminal、Tabby 和 Ghostty 带有目录感知行为；其他手动 App 默认使用 macOS 标准 URL 打开。Magic Right 不保存固定的 `/Applications/...` 路径，也不执行用户提供的 Shell 字符串。
 
-- **Developer（开发）**：启用应用动作入口、路径与 Git 工具。
-- **File（文件）**：突出新建、目标目录、压缩和安全文件操作。
-- **All（全部）**：启用当前支持的全部内置动作。
+### Codex Here!
 
-应用预设只会更新可编辑的内置配置，不会把用户锁进固定模式。新发现的外部 App 始终由用户主动选择，因此安装新编辑器不会自行改变 Finder 菜单。发布的代码、界面文案、图标、模板和内置资产必须原创，或使用有明确兼容许可证的资源。
+Finder 中只有一个 `Codex Here!`，终端选择集中在设置里：
 
-## 平台与设计
+- **系统终端**：在现有窗口中创建本机标签页；首次使用时 macOS 会请求自动化权限。
+- **Ghostty**：使用工作目录参数并直接运行已解析的 Codex 可执行文件。
+- **Tabby**：复用现有实例，新建当前目录下的本机交互式 zsh 标签页。
 
-- macOS 15 或更高版本
-- Swift 6、SwiftUI 与 AppKit
-- 菜单栏宿主 App + Finder Sync 扩展
-- 通过 App Group 共享状态
-- 通过 GitHub Releases 发布源码和 DMG，不上架 Mac App Store
-- 在把公开 DMG 描述为适合普通用户安装前，必须完成 Developer ID 签名和 Apple 公证
+整个过程不模拟键盘输入，也不会把 Finder 路径拼进待求值的脚本源码。只有终端与本机 Codex 都可用时，Finder 才显示该动作。
 
-App 图标使用原创的石墨灰与电光青右键菜单构图；菜单栏图标采用独立的单色 Template Icon：透明鼠标轮廓，并着重显示右键区域。发布前需按各自用途检查小尺寸、深浅色和系统着色状态。素材来源记录见 [Design/ASSET_NOTES.md](Design/ASSET_NOTES.md)。
+### 会记忆的目的地
 
-产品约束详见[架构](docs/ARCHITECTURE.md)、[隐私](docs/PRIVACY.md)和[权限](docs/PERMISSIONS.md)。
+Magic Right 在受支持的本地根目录中记录 Finder 观察到的访问，以及由 Magic Right 打开的目录。它只保存规范化路径、访问次数和时间：
 
-## 从源码构建
+- 停留 2 秒后才计入一次访问；
+- 30 分钟内的重复观察自动去重；
+- 常用分数采用 30 天半衰期；
+- 缺失、已排除或不可用卷上的路径不会出现在菜单中。
 
-在 Xcode 中打开 `SuperRight.xcodeproj` 并选择 `SuperRight` scheme，或运行：
+固定 / 常用 / 最近目录统一供“跳转到”“移动到”和“复制到”使用。“跳转到”会切换当前 Finder 窗口；没有窗口时才创建新窗口。
+
+### 真正的系统剪贴板
+
+文件剪切会把标准 `public.file-url` 项写入 macOS 系统剪贴板，因此 Finder、Deck 和其他兼容 App 都可以读取。Magic Right 只为自己的“粘贴”动作附加私有剪切标记：
+
+- 来自 Magic Right 剪切的项目按移动处理；
+- 其他 App 提供的标准文件 URL 按复制处理；
+- 不尝试猜测其他 App 的私有剪切协议；
+- 目标存在同名项目时不会静默覆盖。
+
+### 面向文件与仓库的实用动作
+
+- 新建 Markdown、TXT、RTF、XML、JSON、YAML 和 `.gitignore`，自动避让重名。
+- 复制绝对路径、Shell 安全路径和 Git 根目录相对路径。
+- 打开 Git 根目录、编辑器或远程仓库页面，并复制 origin URL。
+- 查看文件大小、类型、时间和按需计算的 SHA-256。
+- 创建 ZIP；安全解压 ZIP、tar、tar.gz 和 tgz。
+- 创建 Finder 替身；移动、复制、剪切和粘贴均拒绝静默覆盖。
+
+“复制 Shell 安全路径”只负责把每个路径编码成可粘贴给 zsh、bash 或 sh 的独立参数；它不会执行命令，也不代表围绕这些参数拼接的整条命令天然安全。
+
+## 隐私与安全
+
+- 目录学习完全留在本机，不读取目录内容，不发送遥测。
+- 外部 App 以 Bundle ID 表示，路径按结构化参数传递。
+- 用户文件操作拒绝静默覆盖，并记录本地操作结果。
+- 宿主 App 与 Finder 扩展的权限边界、共享存储和非 App Store 分发约束详见[隐私](docs/PRIVACY.md)、[权限](docs/PERMISSIONS.md)与[架构](docs/ARCHITECTURE.md)。
+
+Magic Right 通过 GitHub 分发，不上架 Mac App Store。当前支持的文件根目录为 `/Users/`、`/Volumes/` 与 `/private/tmp/`，仍受 macOS TCC 和普通文件权限约束。
+
+## 开发与验证
 
 ```sh
 ./scripts/verify-project.sh
 ```
 
-验证脚本会在仓库根目录或 `Packages` 下一层存在 `Package.swift` 时运行 Swift Package 测试，然后列出 Xcode scheme，并使用临时 SwiftPM 缓存和 Derived Data 执行不签名的 Debug 构建。可用第一个参数或 `SUPER_RIGHT_SCHEME` 指定其他 scheme。
+验证脚本会运行 Swift Package 单元测试、列出 Xcode scheme，并执行不签名的 Debug 构建。Release 构建、Finder 扩展验收、Developer ID 签名、公证和 DMG 流程见[构建与发布](docs/BUILDING.md)。
 
-开发签名、Finder 扩展启用、Release 构建、DMG 打包和正式公证边界详见[构建与发布](docs/BUILDING.md)。
+项目遵循几个简单原则：Finder 主线程保持轻量；用户路径永远不拼进 Shell 命令；文件绝不静默覆盖；发布资产必须原创或具有明确兼容许可证。
 
-把已经构建的 App 打包成不会覆盖已有文件的 DMG：
+欢迎提交 Issue 和 Pull Request。参与开发前请阅读[架构](docs/ARCHITECTURE.md)和[更新日志](CHANGELOG.md)。
 
-```sh
-./scripts/create-dmg.sh "/path/to/Magic Right.app" ./dist
-```
-
-产物内含 App 和指向 `/Applications` 的软链接，可拖拽安装。脚本不会处理签名或公证。
-
-## 项目原则
-
-- 保持 Finder 响应迅速，耗时操作必须交给宿主 App。
-- 用 Bundle ID 表示外部 App，而不是保存固定路径。
-- 路径只能作为结构化参数传递，禁止拼接进 Shell 命令。
-- 绝不静默覆盖用户文件。
-- 目录学习数据只留在本机，且不读取目录内容。
-- 构建产物、DMG、证书、凭据和公证配置不得进入 Git。
-- 发布的实现、文案、图标、模板和内置资产必须原创，或具有明确兼容的许可证。
-
-## 参与开发
-
-使用 `main` 分支，保持改动小且便于审查，为共享核心逻辑补充测试，并在提交改动前运行 `./scripts/verify-project.sh`。请勿提交签名材料或生成的发布产物。
-
-版本进度见 [CHANGELOG](CHANGELOG.md)。
-
-## 许可证
+## License
 
 Magic Right 使用 [MIT License](LICENSE)。
+
+`Codex` 是 OpenAI 的商标。Magic Right 与 OpenAI 没有隶属、赞助或背书关系；Codex 图标仅在运行时从用户本机安装的 App 读取，仓库与安装包不重新分发该图标。

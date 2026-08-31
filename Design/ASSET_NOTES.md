@@ -1,13 +1,14 @@
 # Asset notes
 
-Magic Right's application icon and menu bar icon were created specifically for this project. They do not copy or derive from a third-party product icon or brand asset.
+Magic Right's application icon was selected and supplied by the project owner for this repository. The menu bar icon was created specifically for Magic Right. Neither asset is sourced from a competing Finder-extension product.
 
 ## Application icon
 
-- `AppIcon-generated-source.png` is the retained generation source.
-- `AppIcon-master.png` is the reviewed 1024 px master used to export the Xcode AppIcon set.
-- The direction is a graphite mouse silhouette with the right button highlighted in blue and a single restrained light point.
-- The exported 16 px and 32 px variants were checked for recognizable shape and right-button emphasis.
+- `AppIcon-generated-source.png` is the project-owner-selected 1254 px source with the connected black corner background and its dark edge fringe removed to genuine transparency.
+- `AppIcon-master.png` is the reviewed 1024 px master used by the README and to export the Xcode AppIcon set.
+- The direction is a friendly blue-and-white Finder helper holding a star wand, with the built-in “Right Click!” callout.
+- The alpha conversion changes only the edge-connected outer background and halo; interior black text, facial details, and wand remain intact.
+- The exported 16 px through 1024 px variants were checked together on a neutral background. Small variants preserve the character silhouette and color identity even though the callout is intentionally not readable at menu-scale sizes.
 
 ## Menu bar icon
 

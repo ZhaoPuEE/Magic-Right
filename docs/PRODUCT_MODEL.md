@@ -6,7 +6,7 @@ Magic Right treats the Finder context menu as a configurable inventory of action
 
 The host app answers one user question: **what should appear when I right-click in Finder?**
 
-- The sidebar selects a Finder action group.
+- The sidebar selects a Finder action group; it does not add another level to the Finder menu.
 - The detail pane lists the real actions in that group.
 - Each row has a stable action identity, an enable state, an icon, a display name, an availability state, an order, and optional settings.
 - A container visibility switch, when a group needs one, is presented separately from its real action rows and never counted as an action.
@@ -24,15 +24,22 @@ The sidebar and Finder menu use the same groups:
 
 Overview is a summary of these groups, not an additional place to configure different values.
 
+Enabled entries appear directly at the first level of Finder's context menu. Magic Right does not add an umbrella submenu. An entry opens a submenu only when the action itself requires another choice, such as a new-file type or destination.
+
+Finder places one enabled, branded Magic Right settings row immediately above the extension's contiguous action block. The row uses the app icon and opens settings instead of presenting as unavailable text. Internal action groups do not add separator rows. Destination actions expose the bounded pinned, frequent, and recent catalog in their own submenu. The menu bar does not duplicate those directory destinations; it retains only lightweight learning, settings, and lifecycle controls.
+
 ## Distinctive product model
 
 The action list is only the control surface. The product's differentiating engine is:
 
 - local folder-frequency memory with pinned, frequent, and recent destinations;
+- one shared destination catalog reused by Jump To, Move To, and Copy To;
 - dynamic application discovery by bundle identifier, including apps installed later;
 - context-aware visibility, so irrelevant Git or selection-specific actions stay out of Finder;
 - structured, fail-closed execution and collision-safe file operations;
 - an open action registry that can grow without hard-coded application paths.
+
+Codex Here is a built-in workflow action rather than another discovered application row. Finder always exposes one Codex Here entry; Settings chooses System Terminal, Ghostty, or Tabby as its execution terminal. The action is visible when Codex and the selected terminal are available and uses the selected item’s directory context. Terminal-specific adapters pass the directory and resolved Codex executable as positional data without synthetic input or path interpolation into executable script source.
 
 The interface should express these capabilities in Magic Right's own visual language. It must not imitate another product's layout, copy, icons, ordering, or branded assets.
 
@@ -44,7 +51,7 @@ Every action must distinguish:
 2. **Enabled**: the user wants the action in Finder.
 3. **Visible in this context**: the current selection makes the action relevant.
 
-For example, an enabled Git action is still hidden outside a repository. An enabled Zed row becomes unavailable when Zed is uninstalled but retains its preference for a future reinstall. A planned action is shown as “In development” and cannot be enabled.
+For example, an enabled Git action is still hidden outside a repository. An enabled Zed row becomes unavailable when Zed is uninstalled but retains its preference for a future reinstall. Move To and Copy To are available actions; a planned action such as move undo is shown as “In development” and cannot be enabled.
 
 This separation prevents disabled, unavailable, and contextually irrelevant actions from looking like the same state.
 
@@ -65,11 +72,23 @@ This separation prevents disabled, unavailable, and contextually irrelevant acti
 - The learning toggle controls local observation and scoring.
 - History management remains available while Finder visibility or learning is paused.
 
-This lets a user pause data collection without losing pinned destinations or hide the submenu without destroying history.
+This lets a user pause data collection without losing pinned destinations or hide the Jump To entry without destroying history.
+
+## Shared destinations
+
+Pinned, frequent, and recent are views over one local directory history, not three unrelated configuration lists. The Finder extension derives one deduplicated, menu-ready destination catalog from those views and reuses it for:
+
+- **Jump To**: change the current Finder window to the selected destination;
+- **Move To**: move the current selection without silently overwriting an existing item;
+- **Copy To**: copy the current selection without silently overwriting an existing item.
+
+A custom display name changes menu presentation only; the canonical directory URL remains the operation target. A missing or excluded directory is omitted from active menus without silently deleting its history record.
 
 ## Finder boundary
 
-The host app writes a compact, versioned App Group snapshot. The Finder extension reads it and renders only actions that are implemented, enabled, and relevant to the current selection. A missing first-run configuration uses a small product default; a present but corrupt configuration fails closed with all optional actions disabled.
+The host app and Finder extension resolve one compact, versioned shared-storage backend. A valid App Group from a formally signed build is always preferred. An ad-hoc or source build without a usable App Group falls back to the `dev.magicright.shared` defaults suite and uses `~/Library/Application Support/Magic Right/Shared` for cross-process coordination files. The extension reads the resolved backend and renders only actions that are implemented, enabled, and relevant to the current selection. It captures the selection and target directory while building the menu so clicking a first-level action does not depend on Finder still exposing transient selection state after the menu closes. A missing first-run configuration uses a small product default; a present but corrupt configuration fails closed with all optional actions disabled.
+
+The host app is non-sandboxed, but macOS plug-in registration requires the Finder extension to be sandboxed. In the current open-source, non-App-Store GitHub/Developer ID architecture, that extension receives temporary read/write exceptions only for `/Users/`, `/Volumes/`, and `/private/tmp/`, plus shared-preference access to `dev.magicright.shared`. Security-scoped bookmark persistence is not implemented. These exceptions remain subject to TCC and ordinary filesystem permissions; an App Store build would require a separate access and migration design.
 
 ## Visual and accessibility principles
 

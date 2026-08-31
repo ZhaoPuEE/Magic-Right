@@ -107,6 +107,7 @@ xcodebuild \
   -disablePackageRepositoryCache \
   CODE_SIGNING_ALLOWED=NO \
   CODE_SIGNING_REQUIRED=NO \
+  REGISTER_WITH_LAUNCH_SERVICES=NO \
   build
 
 printf '==> Verification completed successfully\n'

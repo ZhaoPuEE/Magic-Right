@@ -6,18 +6,19 @@ Magic Right is designed as a local utility. Its V1 product contract does not req
 
 Depending on enabled features, Magic Right stores:
 
-- menu layout, feature toggles, and launch-at-login preference;
+- menu layout and feature toggles; launch-at-login state is managed by macOS;
 - enabled and discovered applications by bundle identifier, plus cached display metadata;
-- imported template metadata and security-scoped bookmarks chosen by the user;
 - pinned, frequent, and recent directory records, including paths and visit timestamps;
 - exclusions, custom directory names, and the paused/active learning state;
 - a compact record of Magic Right file operations needed to show outcomes and support the promised undo behavior.
 
 Folder paths can reveal private project names or account names and should be treated as personal data even though they stay local.
 
+The host app is non-sandboxed. The Finder extension is sandboxed and, for the current non-App-Store GitHub/Developer ID architecture, declares temporary read/write exceptions for `/Users/`, `/Volumes/`, and `/private/tmp/` plus shared-preference access to `dev.magicright.shared`. It does not create or persist security-scoped bookmarks. Imported templates are also not part of the current implementation; their future storage and access contract must be documented before that feature ships.
+
 ## Smart folder learning
 
-When the user enables learning, Magic Right records eligible directory visits reported by Finder and directories opened through Magic Right. The user has chosen the inclusive mode: system, hidden, and temporary directories may be recorded unless explicitly excluded.
+When the user enables learning, Magic Right records eligible directory visits reported by Finder and directories opened through Magic Right. For the current extension, eligible paths are constrained by the declared `/Users/`, `/Volumes/`, and `/private/tmp/` temporary exceptions and by macOS privacy/filesystem enforcement. Hidden paths within those roots may be recorded unless explicitly excluded; this is not permission to observe arbitrary system directories.
 
 Learning does **not**:
 
@@ -49,7 +50,7 @@ Settings must provide controls to:
 - remove imported templates and destinations;
 - clear recoverable operation history.
 
-Removing the app does not automatically guarantee removal of its App Group container. Complete-uninstall instructions must identify the exact container only after the production App Group identifier is finalized; documentation must never recommend deleting a broad Library directory.
+Removing the app does not automatically guarantee removal of shared data. A validly signed build prefers the App Group container; ad-hoc/source builds may use the `dev.magicright.shared` defaults suite and `~/Library/Application Support/Magic Right/Shared`. Complete-uninstall instructions must identify only these exact backends after verifying which one the build used; documentation must never recommend deleting a broad Library directory.
 
 ## Future contributions
 
