@@ -19,7 +19,7 @@
 
 <p align="center"><a href="README.zh-CN.md">简体中文</a></p>
 
-> **0.1.0 open-source preview:** Core tests and Debug/Release compilation pass locally on Apple silicon. A public DMG still requires a valid Developer ID signature, Apple notarization, and clean-machine installation validation; build from source for now. Intel Macs have not been validated yet.
+> **0.1.0 open-source preview:** Core tests and Debug/Release builds pass locally and in GitHub Actions. An [Apple-silicon preview DMG](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0-preview.1) is available, but it is ad-hoc signed and not Apple-notarized, so macOS may block its first launch. A stable signed release still requires Developer ID signing, notarization, and clean-machine validation. Intel Macs have not been validated yet.
 
 ## One right-click, connected to your workflow
 

@@ -115,9 +115,13 @@ The output is `dist/Magic Right.dmg`. The image contains the app and an `Applica
 
 DMGs are ignored by Git and must not be committed.
 
-## Public release boundary
+An ad-hoc build may be attached to a GitHub **pre-release** only when the title
+and release notes clearly identify the supported architecture and state that
+the artifact is unsigned by Developer ID and not notarized.
 
-A public GitHub Release requires more than a successful local DMG:
+## Signed stable release boundary
+
+A signed, notarized stable GitHub Release requires more than a successful local DMG:
 
 1. Run unit tests and `./scripts/verify-project.sh`.
 2. Complete the real-app and Finder extension test matrix on supported macOS versions.

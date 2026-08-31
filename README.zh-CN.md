@@ -19,7 +19,7 @@
 
 <p align="center"><a href="README.md">English</a></p>
 
-> **0.1.0 开源预览**：核心单元测试及 Debug / Release 编译已在 Apple Silicon Mac 上通过。公开 DMG 仍需有效 Developer ID 签名、Apple 公证及干净环境安装验收；当前请从源码构建，Intel Mac 尚未完成验证。
+> **0.1.0 开源预览**：核心测试及 Debug / Release 构建已在本机和 GitHub Actions 通过。现在可以下载 [Apple Silicon 预览 DMG](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0-preview.1)，但它仅为 ad-hoc 签名且未经 Apple 公证，macOS 可能阻止首次启动。正式稳定版仍需 Developer ID 签名、公证与干净环境验收；Intel Mac 尚未完成验证。
 
 ## 一次右键，连接你的工作流
 
