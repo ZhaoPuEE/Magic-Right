@@ -116,9 +116,7 @@ public struct FileInformationService: Sendable {
             .isWritableKey
         ]
         let values = try? url.resourceValues(forKeys: keys)
-        let kind = fileType == .typeSymbolicLink
-            ? FileItemKind.symbolicLink
-            : values.map(Self.kind(from:)) ?? .other
+        let kind = Self.kind(fileType: fileType, resourceValues: values)
 
         let sizes: (logical: Int64?, allocated: Int64?)
         if kind == .directory, options.calculateDirectorySize {
@@ -170,12 +168,24 @@ public struct FileInformationService: Sendable {
         )
     }
 
-    private static func kind(from values: URLResourceValues) -> FileItemKind {
-        if values.isAliasFile == true { return .alias }
-        if values.isSymbolicLink == true { return .symbolicLink }
-        if values.isDirectory == true { return .directory }
-        if values.isRegularFile == true { return .regularFile }
-        return .other
+    private static func kind(
+        fileType: FileAttributeType,
+        resourceValues values: URLResourceValues?
+    ) -> FileItemKind {
+        switch fileType {
+        case .typeSymbolicLink:
+            return .symbolicLink
+        case .typeDirectory:
+            return .directory
+        case .typeRegular:
+            return values?.isAliasFile == true ? .alias : .regularFile
+        default:
+            if values?.isAliasFile == true { return .alias }
+            if values?.isSymbolicLink == true { return .symbolicLink }
+            if values?.isDirectory == true { return .directory }
+            if values?.isRegularFile == true { return .regularFile }
+            return .other
+        }
     }
 
     private static func recursiveDirectorySizes(

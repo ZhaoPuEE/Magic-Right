@@ -31,10 +31,11 @@ struct CrossProcessFileLockTests {
         try withTemporaryLockURL { lockURL in
             let probe = CriticalSectionProbe()
             let group = DispatchGroup()
+            var workers: [Thread] = []
 
             for _ in 0..<4 {
                 group.enter()
-                DispatchQueue.global().async {
+                let worker = Thread {
                     defer { group.leave() }
                     do {
                         try CrossProcessFileLock.withLock(at: lockURL) {
@@ -47,12 +48,21 @@ struct CrossProcessFileLockTests {
                         probe.recordFailure()
                     }
                 }
+                workers.append(worker)
+                worker.start()
             }
 
-            #expect(group.wait(timeout: .now() + 3) == .success)
+            #expect(group.wait(timeout: .now() + 10) == .success)
             #expect(probe.maximumConcurrentCount == 1)
             #expect(probe.completionCount == 4)
             #expect(probe.failureCount == 0)
+
+            // Retain explicit workers until all four finish. A global dispatch
+            // queue can be starved when Swift Testing runs many suites in
+            // parallel on a small CI runner, which tests scheduling instead of
+            // the advisory lock itself.
+            let allWorkersFinished = workers.allSatisfy { $0.isFinished }
+            #expect(allWorkersFinished)
         }
     }
 
