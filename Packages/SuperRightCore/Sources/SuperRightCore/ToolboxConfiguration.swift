@@ -38,6 +38,7 @@ public enum ToolboxAction: String, Codable, CaseIterable, Hashable, Sendable {
     case archive
     case unarchive
     case openWith
+    case codexHere
     case copyAbsolutePath
     case copyShellPath
     case copyFileURL
@@ -68,7 +69,7 @@ public enum ToolboxAction: String, Codable, CaseIterable, Hashable, Sendable {
             .directories
         case .archive, .unarchive:
             .archive
-        case .openWith:
+        case .openWith, .codexHere:
             .openWith
         case .copyGitRelativePath, .openGitRoot, .openGitRootInEditor,
              .openOrigin, .copyOriginURL:
@@ -84,12 +85,13 @@ public enum ToolboxAction: String, Codable, CaseIterable, Hashable, Sendable {
     public var isImplemented: Bool {
         switch self {
         case .newMarkdown, .newPlainText, .newRichText, .newXML, .newJSON,
-             .newYAML, .newGitignore, .frequentDirectories, .openWith,
-             .copyAbsolutePath, .copyShellPath, .copyFileURL:
+             .newYAML, .newGitignore, .moveTo, .copyTo, .cut, .paste,
+             .frequentDirectories, .archive, .unarchive, .openWith, .codexHere,
+             .copyAbsolutePath, .copyShellPath, .copyGitRelativePath,
+             .openGitRoot, .openGitRootInEditor, .openOrigin, .copyOriginURL,
+             .fileInfo, .createAlias:
             true
-        case .newFile, .moveTo, .copyTo, .cut, .paste, .archive, .unarchive,
-             .copyGitRelativePath, .openGitRoot, .openGitRootInEditor,
-             .openOrigin, .copyOriginURL, .fileInfo, .createAlias:
+        case .newFile, .copyFileURL:
             false
         }
     }
@@ -132,9 +134,10 @@ public enum ToolboxAction: String, Codable, CaseIterable, Hashable, Sendable {
         case .archive: "Compress"
         case .unarchive: "Extract"
         case .openWith: "Open With"
+        case .codexHere: "Codex Here!"
         case .copyAbsolutePath: "Copy Absolute Path"
         case .copyShellPath: "Copy Shell-safe Path"
-        case .copyFileURL: "Copy file URL"
+        case .copyFileURL: "Removed Legacy Action"
         case .copyGitRelativePath: "Copy Path Relative to Git Root"
         case .openGitRoot: "Open Git Root"
         case .openGitRootInEditor: "Open Git Root in Editor"
@@ -172,14 +175,17 @@ public enum ToolboxPreset: String, Codable, CaseIterable, Hashable, Sendable {
         case .developer:
             requested = [
                 .newMarkdown, .newPlainText, .newXML, .newJSON, .newYAML,
-                .newGitignore, .frequentDirectories, .openWith,
-                .copyAbsolutePath, .copyShellPath, .copyFileURL
+                .newGitignore, .moveTo, .copyTo, .frequentDirectories, .openWith,
+                .codexHere,
+                .copyAbsolutePath, .copyShellPath, .copyGitRelativePath,
+                .openGitRoot, .openGitRootInEditor, .openOrigin, .copyOriginURL
             ]
         case .file:
             requested = [
                 .newMarkdown, .newPlainText, .newRichText, .newXML, .newJSON,
-                .newYAML, .newGitignore, .frequentDirectories, .openWith,
-                .copyAbsolutePath, .copyFileURL
+                .newYAML, .newGitignore, .moveTo, .copyTo, .cut, .paste,
+                .frequentDirectories, .openWith, .codexHere,
+                .copyAbsolutePath, .archive, .unarchive, .fileInfo, .createAlias
             ]
         case .all:
             requested = Set(ToolboxAction.availableActions)
@@ -239,6 +245,9 @@ public struct ToolboxGroupCounts: Codable, Hashable, Sendable {
 }
 
 public struct ToolboxConfiguration: Codable, Hashable, Sendable {
+    private static let currentSchemaVersion = 3
+
+    private var schemaVersion: Int
     public private(set) var actions: [ToolboxActionPreference]
 
     /// A fail-closed configuration used when persisted data is present but
@@ -249,6 +258,7 @@ public struct ToolboxConfiguration: Codable, Hashable, Sendable {
     }
 
     public init(preset: ToolboxPreset) {
+        schemaVersion = Self.currentSchemaVersion
         let enabled = preset.enabledActions
         actions = ToolboxAction.allCases.enumerated().map { index, action in
             ToolboxActionPreference(
@@ -264,6 +274,7 @@ public struct ToolboxConfiguration: Codable, Hashable, Sendable {
     /// configuration enabled aggregate `newFile`, its missing typed actions are
     /// enabled during migration.
     public init(actions: [ToolboxActionPreference]) {
+        schemaVersion = Self.currentSchemaVersion
         let legacyNewFileWasEnabled = actions.first {
             $0.action == .newFile
         }?.isEnabled == true
@@ -353,6 +364,7 @@ public struct ToolboxConfiguration: Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
+        case schemaVersion
         case actions
     }
 
@@ -368,15 +380,34 @@ public struct ToolboxConfiguration: Codable, Hashable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedSchemaVersion = try container.decodeIfPresent(
+            Int.self,
+            forKey: .schemaVersion
+        ) ?? 1
         let decoded = try container.decode(
             [LossyActionPreference].self,
             forKey: .actions
         )
         self.init(actions: decoded.compactMap(\.value))
+        if decodedSchemaVersion < Self.currentSchemaVersion {
+            if decodedSchemaVersion < 2 {
+                // Move and copy were visible as planned rows in schema 1 but could
+                // not be enabled. Turning them on during this one-time migration
+                // gives existing installs the newly completed destination menus.
+                setEnabled(true, for: .moveTo)
+                setEnabled(true, for: .copyTo)
+            }
+            if decodedSchemaVersion < 3 {
+                // Codex Here is on by default for existing installs while still
+                // remaining an independent switch in the application-actions page.
+                setEnabled(true, for: .codexHere)
+            }
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
         try container.encode(actions, forKey: .actions)
     }
 

@@ -10,6 +10,7 @@ public enum ApplicationAdapterKind: String, Codable, CaseIterable, Hashable, Sen
     case visualStudioCode
     case tabby
     case terminal
+    case ghostty
 }
 
 public enum ApplicationDescriptorSource: String, Codable, Hashable, Sendable {

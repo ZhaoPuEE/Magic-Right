@@ -23,27 +23,19 @@ public struct ApplicationRegistry<Locator: ApplicationLocating>: Sendable {
     /// All currently installed known or manually registered applications.
     /// Newly installed catalog applications appear here without being enabled.
     public func detectedApplications() -> [DetectedApplication] {
-        allDescriptors()
-            .compactMap(detect)
-            .sorted { lhs, rhs in
-                let lhsOrder = preferences.preference(
-                    forBundleIdentifier: lhs.bundleIdentifier
-                )?.order ?? Int.max
-                let rhsOrder = preferences.preference(
-                    forBundleIdentifier: rhs.bundleIdentifier
-                )?.order ?? Int.max
-
-                if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
-                return lhs.menuDisplayName.localizedStandardCompare(rhs.menuDisplayName) == .orderedAscending
-            }
+        sortDetectedApplications(allDescriptors().compactMap(detect))
     }
 
     /// Installed and explicitly enabled applications suitable for a Finder menu.
     /// Uninstalled entries remain in preferences but are omitted from this view.
     public func visibleEnabledApplications() -> [DetectedApplication] {
-        detectedApplications().filter {
-            preferences.isEnabled(bundleIdentifier: $0.bundleIdentifier)
-        }
+        sortDetectedApplications(
+            allDescriptors()
+                .filter {
+                    preferences.isEnabled(bundleIdentifier: $0.bundleIdentifier)
+                }
+                .compactMap(detect)
+        )
     }
 
     public mutating func setEnabled(_ isEnabled: Bool, bundleIdentifier: String) {
@@ -145,5 +137,23 @@ public struct ApplicationRegistry<Locator: ApplicationLocating>: Sendable {
             currentApplicationURL: located.applicationURL,
             currentDisplayName: displayName
         )
+    }
+
+    private func sortDetectedApplications(
+        _ applications: [DetectedApplication]
+    ) -> [DetectedApplication] {
+        applications.sorted { lhs, rhs in
+            let lhsOrder = preferences.preference(
+                forBundleIdentifier: lhs.bundleIdentifier
+            )?.order ?? Int.max
+            let rhsOrder = preferences.preference(
+                forBundleIdentifier: rhs.bundleIdentifier
+            )?.order ?? Int.max
+
+            if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+            return lhs.menuDisplayName.localizedStandardCompare(
+                rhs.menuDisplayName
+            ) == .orderedAscending
+        }
     }
 }

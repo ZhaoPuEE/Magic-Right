@@ -11,6 +11,9 @@ struct ToolboxConfigurationTests {
         let all = ToolboxConfiguration(preset: .all)
 
         #expect(developer.preference(for: .newJSON)?.isEnabled == true)
+        #expect(developer.preference(for: .moveTo)?.isEnabled == true)
+        #expect(developer.preference(for: .copyTo)?.isEnabled == true)
+        #expect(developer.preference(for: .codexHere)?.isEnabled == true)
         #expect(developer.preference(for: .newRichText)?.isEnabled == false)
         #expect(file.preference(for: .newRichText)?.isEnabled == true)
         #expect(file.preference(for: .copyShellPath)?.isEnabled == false)
@@ -33,8 +36,11 @@ struct ToolboxConfigurationTests {
         let implemented: Set<ToolboxAction> = [
             .newMarkdown, .newPlainText, .newRichText, .newXML,
             .newJSON, .newYAML, .newGitignore,
-            .frequentDirectories, .openWith,
-            .copyAbsolutePath, .copyShellPath, .copyFileURL
+            .moveTo, .copyTo, .cut, .paste, .frequentDirectories,
+            .archive, .unarchive, .openWith, .codexHere,
+            .copyAbsolutePath, .copyShellPath, .copyGitRelativePath,
+            .openGitRoot, .openGitRootInEditor, .openOrigin, .copyOriginURL,
+            .fileInfo, .createAlias
         ]
 
         #expect(Set(ToolboxAction.availableActions) == implemented)
@@ -43,13 +49,57 @@ struct ToolboxConfigurationTests {
         })
     }
 
+    @Test("Schema 2 configurations enable Codex Here once during migration")
+    func codexHereMigration() throws {
+        let oldJSON = """
+        {
+          "schemaVersion" : 2,
+          "actions" : [
+            { "action" : "openWith", "isEnabled" : false, "order" : 0 }
+          ]
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(
+            ToolboxConfiguration.self,
+            from: Data(oldJSON.utf8)
+        )
+
+        #expect(decoded.preference(for: .openWith)?.isEnabled == false)
+        #expect(decoded.preference(for: .codexHere)?.isEnabled == true)
+    }
+
+    @Test("Removed file URL action stays decodable but cannot be re-enabled")
+    func removedFileURLActionMigratesDisabled() throws {
+        let oldJSON = """
+        {
+          "schemaVersion" : 2,
+          "actions" : [
+            { "action" : "copyFileURL", "isEnabled" : true, "order" : 0 }
+          ]
+        }
+        """
+
+        var decoded = try JSONDecoder().decode(
+            ToolboxConfiguration.self,
+            from: Data(oldJSON.utf8)
+        )
+
+        #expect(decoded.preference(for: .copyFileURL)?.isEnabled == false)
+        #expect(!ToolboxAction.availableActions.contains(.copyFileURL))
+        decoded.setEnabled(true, for: .copyFileURL)
+        #expect(decoded.preference(for: .copyFileURL)?.isEnabled == false)
+    }
+
     @Test("Group toggle and counts only consider implemented actions available")
     func groupToggleAndCounts() {
         var configuration = ToolboxConfiguration(preset: .developer)
 
         configuration.setGroupEnabled(true, for: .transfer)
-        #expect(configuration.enabledActions(in: .transfer).isEmpty)
-        #expect(configuration.preference(for: .moveTo)?.isEnabled == false)
+        #expect(configuration.enabledActions(in: .transfer).map(\.action) == [
+            .moveTo, .copyTo, .cut, .paste
+        ])
+        #expect(configuration.preference(for: .moveTo)?.isEnabled == true)
 
         configuration.setGroupEnabled(false, for: .newFile)
         var counts = configuration.counts(in: .newFile)
@@ -70,8 +120,8 @@ struct ToolboxConfigurationTests {
     @Test("An unavailable action cannot be enabled directly")
     func unavailableActionCannotBeEnabled() {
         var configuration = ToolboxConfiguration(preset: .all)
-        configuration.setEnabled(true, for: .openGitRoot)
-        #expect(configuration.preference(for: .openGitRoot)?.isEnabled == false)
+        configuration.setEnabled(true, for: .copyFileURL)
+        #expect(configuration.preference(for: .copyFileURL)?.isEnabled == false)
     }
 
     @Test("User state controls enablement ordering and names")
@@ -105,7 +155,8 @@ struct ToolboxConfigurationTests {
 
         #expect(decoded.actions.count == ToolboxAction.allCases.count)
         #expect(decoded.preference(for: .newFile)?.isEnabled == false)
-        #expect(decoded.preference(for: .moveTo)?.isEnabled == false)
+        #expect(decoded.preference(for: .moveTo)?.isEnabled == true)
+        #expect(decoded.preference(for: .copyTo)?.isEnabled == true)
         #expect(decoded.preference(for: .copyAbsolutePath)?.displayName == "Path")
         for preset in NewFilePreset.allCases {
             #expect(decoded.preference(for: preset.toolboxAction)?.isEnabled == true)

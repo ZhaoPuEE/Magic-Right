@@ -40,7 +40,11 @@ public struct KnownApplicationCatalog: Hashable, Sendable {
         descriptor(bundleIdentifier: "com.vscodium", displayName: "VSCodium"),
         descriptor(bundleIdentifier: "com.googlecode.iterm2", displayName: "iTerm2"),
         descriptor(bundleIdentifier: "dev.warp.Warp-Stable", displayName: "Warp"),
-        descriptor(bundleIdentifier: "com.mitchellh.ghostty", displayName: "Ghostty"),
+        descriptor(
+            bundleIdentifier: "com.mitchellh.ghostty",
+            displayName: "Ghostty",
+            adapterKind: .ghostty
+        ),
         descriptor(bundleIdentifier: "com.sublimetext.4", displayName: "Sublime Text"),
         descriptor(bundleIdentifier: "com.panic.Nova", displayName: "Nova"),
 

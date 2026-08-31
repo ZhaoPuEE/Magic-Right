@@ -33,6 +33,51 @@ public struct ApplicationPreferences: Codable, Hashable, Sendable {
         self.applications = Self.deduplicated(applications)
     }
 
+    /// First-run actions promised by the initial product scope. Newly
+    /// discovered applications such as Zed remain opt-in.
+    public static var developerDefaults: ApplicationPreferences {
+        let identifiers = [
+            "com.apple.Terminal",
+            "org.tabby",
+            "com.mitchellh.ghostty",
+            "com.microsoft.VSCode"
+        ]
+        let catalog = KnownApplicationCatalog.standard
+        let applications = identifiers.enumerated().compactMap { order, identifier in
+            catalog.descriptor(forBundleIdentifier: identifier).map {
+                ApplicationMenuPreference(
+                    descriptor: $0,
+                    isEnabled: true,
+                    order: order
+                )
+            }
+        }
+        return ApplicationPreferences(applications: applications)
+    }
+
+    /// Adds newly promised first-party integrations without overriding an
+    /// application the user already enabled, disabled, renamed, or reordered.
+    public func addingMissingDeveloperDefaults() -> ApplicationPreferences {
+        var migrated = self
+        var nextOrder = (applications.map(\.order).max() ?? -1) + 1
+
+        for defaultPreference in Self.developerDefaults.applications
+            where migrated.preference(
+                forBundleIdentifier: defaultPreference.descriptor.bundleIdentifier
+            ) == nil {
+            migrated.applications.append(
+                ApplicationMenuPreference(
+                    descriptor: defaultPreference.descriptor,
+                    isEnabled: defaultPreference.isEnabled,
+                    order: nextOrder,
+                    customDisplayName: defaultPreference.customDisplayName
+                )
+            )
+            nextOrder += 1
+        }
+        return migrated
+    }
+
     public func preference(forBundleIdentifier bundleIdentifier: String) -> ApplicationMenuPreference? {
         applications.first { $0.descriptor.bundleIdentifier == bundleIdentifier }
     }

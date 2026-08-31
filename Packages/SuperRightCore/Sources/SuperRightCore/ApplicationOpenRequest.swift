@@ -18,6 +18,7 @@ public enum StructuredLaunchArgument: Codable, Hashable, Sendable {
     case flag(String)
     case path(URL)
     case paths([URL])
+    case pathOption(name: String, url: URL)
 
     public var argumentValues: [String] {
         switch self {
@@ -27,6 +28,8 @@ public enum StructuredLaunchArgument: Codable, Hashable, Sendable {
             [url.path]
         case let .paths(urls):
             urls.map(\.path)
+        case let .pathOption(name, url):
+            ["\(name)=\(url.path)"]
         }
     }
 }
@@ -74,6 +77,8 @@ public enum ApplicationOpenRequest: Codable, Hashable, Sendable {
 
 public enum ApplicationOpenRequestError: Error, Equatable, Sendable {
     case emptySelection
+    case invalidTabbyURL
+    case unsupportedCodexTerminal
 }
 
 public enum ApplicationOpenRequestBuilder {
@@ -85,16 +90,22 @@ public enum ApplicationOpenRequestBuilder {
 
         switch application.adapterKind {
         case .tabby:
-            // Tabby uses one directory context and accepts it as a structured
-            // argument pair: --directory <path>.
+            // The URL form is delivered to Tabby's existing single instance,
+            // so an already-open window receives a new local tab instead of
+            // macOS creating another application window.
             let directoryURL = directoryContextURL(
                 for: intent,
                 firstURL: urls[0]
             )
-            return .structuredLaunch(
-                StructuredLaunchRequest(
+            return .openURLs(
+                OpenURLsRequest(
                     applicationBundleIdentifier: application.bundleIdentifier,
-                    arguments: [.flag("--directory"), .path(directoryURL)]
+                    urls: [try tabbyURL(
+                        command: "open",
+                        queryItems: [
+                            URLQueryItem(name: "directory", value: directoryURL.path)
+                        ]
+                    )]
                 )
             )
         case .terminal:
@@ -108,6 +119,22 @@ public enum ApplicationOpenRequestBuilder {
                     urls: [directoryURL]
                 )
             )
+        case .ghostty:
+            let directoryURL = directoryContextURL(
+                for: intent,
+                firstURL: urls[0]
+            )
+            return .structuredLaunch(
+                StructuredLaunchRequest(
+                    applicationBundleIdentifier: application.bundleIdentifier,
+                    arguments: [
+                        .pathOption(
+                            name: "--working-directory",
+                            url: directoryURL
+                        )
+                    ]
+                )
+            )
         case .genericURLs, .zed, .visualStudioCode:
             return .openURLs(
                 OpenURLsRequest(
@@ -116,6 +143,89 @@ public enum ApplicationOpenRequestBuilder {
                 )
             )
         }
+    }
+
+    /// Builds a terminal-specific request for Codex Here.
+    ///
+    /// Tabby's URL handler forwards the request to its existing single instance
+    /// and opens a new local tab. The tab starts the system zsh as an interactive
+    /// login shell, changes directory through positional parameters, and then
+    /// replaces itself with the already-resolved Codex binary. The small zsh
+    /// program is constant; Finder-controlled paths never become shell source.
+    public static func makeCodexHereRequest(
+        terminal: CodexHereTerminal = .defaultValue,
+        codexExecutableURL: URL,
+        intent: ApplicationOpenIntent
+    ) throws -> ApplicationOpenRequest {
+        let urls = try urls(for: intent)
+        let directoryURL = directoryContextURL(
+            for: intent,
+            firstURL: urls[0]
+        )
+        switch terminal {
+        case .tabby:
+            let command = [
+                "/bin/zsh",
+                "-l",
+                "-i",
+                "-c",
+                #"cd -- "$1" && exec "$2""#,
+                "magic-right",
+                directoryURL.path,
+                codexExecutableURL.path
+            ]
+            return .openURLs(
+                OpenURLsRequest(
+                    applicationBundleIdentifier: terminal.bundleIdentifier,
+                    urls: [try tabbyURL(
+                        command: "run",
+                        queryItems: [
+                            URLQueryItem(
+                                name: "command",
+                                value: command.map(tabbyShellQuote).joined(separator: " ")
+                            )
+                        ]
+                    )]
+                )
+            )
+
+        case .ghostty:
+            return .structuredLaunch(
+                StructuredLaunchRequest(
+                    applicationBundleIdentifier: terminal.bundleIdentifier,
+                    arguments: [
+                        .pathOption(name: "--working-directory", url: directoryURL),
+                        .flag("-e"),
+                        .path(codexExecutableURL)
+                    ]
+                )
+            )
+
+        case .terminal:
+            throw ApplicationOpenRequestError.unsupportedCodexTerminal
+        }
+    }
+
+    private static func tabbyURL(
+        command: String,
+        queryItems: [URLQueryItem]
+    ) throws -> URL {
+        var components = URLComponents()
+        components.scheme = "tabby"
+        components.host = command
+        components.queryItems = queryItems
+        guard let url = components.url else {
+            throw ApplicationOpenRequestError.invalidTabbyURL
+        }
+        return url
+    }
+
+    /// Tabby's URL parser uses `shell-quote` only to recover an argv array; it
+    /// does not execute this serialized value as shell source. Single-quoting
+    /// each token preserves whitespace and metacharacters, including literal
+    /// apostrophes, before the constant zsh program receives paths as `$1/$2`.
+    private static func tabbyShellQuote(_ value: String) -> String {
+        "'\(value.replacingOccurrences(of: "'", with: "'\"'\"'"))'"
     }
 
     private static func urls(for intent: ApplicationOpenIntent) throws -> [URL] {

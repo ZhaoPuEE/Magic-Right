@@ -47,7 +47,8 @@ struct KnownApplicationCatalogTests {
             "dev.zed.Zed": .zed,
             "com.microsoft.VSCode": .visualStudioCode,
             "org.tabby": .tabby,
-            "com.apple.Terminal": .terminal
+            "com.apple.Terminal": .terminal,
+            "com.mitchellh.ghostty": .ghostty
         ]
 
         for descriptor in KnownApplicationCatalog.standard.descriptors {
