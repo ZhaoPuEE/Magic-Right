@@ -40,9 +40,9 @@ private enum ToolboxPage: String, CaseIterable, Identifiable {
         case .overview: "查看菜单构成与动作状态"
         case .openWith: "编辑器、终端与开发工具"
         case .newFile: "七种内置文件模板"
-        case .directories: "本地记忆、固定与快速跳转"
+        case .directories: "固定、常用、最近目的地"
         case .pathsAndGit: "路径复制与仓库上下文"
-        case .fileTools: "安全移动、复制和信息工具"
+        case .fileTools: "安全移动、复制与操作记录"
         case .archives: "系统归档格式"
         case .settings: "扩展、预设和权限"
         }
@@ -66,7 +66,7 @@ private enum ToolboxPage: String, CaseIterable, Identifiable {
         case .overview, .settings:
             []
         case .openWith:
-            [.openWith]
+            [.openWith, .codexHere]
         case .newFile:
             [
                 .newMarkdown, .newPlainText, .newRichText, .newXML,
@@ -76,7 +76,7 @@ private enum ToolboxPage: String, CaseIterable, Identifiable {
             [.frequentDirectories]
         case .pathsAndGit:
             [
-                .copyAbsolutePath, .copyShellPath, .copyFileURL,
+                .copyAbsolutePath, .copyShellPath,
                 .copyGitRelativePath, .openGitRoot, .openGitRootInEditor,
                 .openOrigin, .copyOriginURL
             ]
@@ -97,6 +97,7 @@ struct SettingsRootView: View {
     @StateObject private var applicationRegistry = ApplicationRegistryModel()
     @EnvironmentObject private var directoryHistory: DirectoryHistoryModel
     @EnvironmentObject private var toolbox: ToolboxConfigurationModel
+    @EnvironmentObject private var loginItem: LoginItemModel
 
     var body: some View {
         NavigationSplitView {
@@ -129,6 +130,14 @@ struct SettingsRootView: View {
         .onAppear {
             toolbox.reload()
             applicationRegistry.scan()
+            loginItem.refresh()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: NSApplication.didBecomeActiveNotification
+            )
+        ) { _ in
+            loginItem.refresh()
         }
     }
 
@@ -154,7 +163,7 @@ struct SettingsRootView: View {
         case .directories:
             DirectoryLearningPage(model: directoryHistory, toolbox: toolbox)
         case .settings:
-            GeneralSettingsPage(toolbox: toolbox)
+            GeneralSettingsPage(toolbox: toolbox, loginItem: loginItem)
         }
     }
 
@@ -165,8 +174,8 @@ struct SettingsRootView: View {
                 applicationRegistry.isEnabled
             ).count
             return FeatureCounts(
-                enabled: enabledApps,
-                available: applicationRegistry.applications.count
+                enabled: enabledApps + (toolbox.isEnabled(.codexHere) ? 1 : 0),
+                available: applicationRegistry.applications.count + 1
             )
         }
         return FeatureCounts(
@@ -232,7 +241,7 @@ private struct OverviewPage: View {
         VStack(alignment: .leading, spacing: 20) {
             PageHeader(
                 title: "Finder 菜单",
-                subtitle: "启用的动作组成右键菜单；不适用的动作会按当前选择自动隐藏。"
+                subtitle: "启用的动作直接显示在 Finder 右键第一级；不适用的动作会自动隐藏。"
             )
 
             VStack(spacing: 0) {
@@ -257,18 +266,6 @@ private struct OverviewPage: View {
                     .stroke(ToolboxTheme.border, lineWidth: 1)
             }
 
-            GroupBox {
-                HStack(spacing: 12) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundStyle(ToolboxTheme.electricCyan)
-                    Text("“可用”表示已经实现并能进入菜单；标记为“开发中”的动作不会被启用。")
-                        .foregroundStyle(ToolboxTheme.secondaryText)
-                    Spacer()
-                }
-                .padding(4)
-            }
-            .groupBoxStyle(GraphiteGroupBoxStyle())
-
             if let errorMessage = toolbox.errorMessage {
                 ErrorLabel(message: errorMessage)
             }
@@ -281,8 +278,8 @@ private struct OverviewPage: View {
                 applications.isEnabled
             ).count
             return FeatureCounts(
-                enabled: enabledApps,
-                available: applications.applications.count
+                enabled: enabledApps + (toolbox.isEnabled(.codexHere) ? 1 : 0),
+                available: applications.applications.count + 1
             )
         }
         return FeatureCounts(
@@ -491,11 +488,12 @@ private struct OpenWithPage: View {
     @ObservedObject var applications: ApplicationRegistryModel
 
     private var enabledCount: Int {
-        return applications.applications.filter(applications.isEnabled).count
+        applications.applications.filter(applications.isEnabled).count
+            + (toolbox.isEnabled(.codexHere) ? 1 : 0)
     }
 
     private var availableCount: Int {
-        applications.applications.count
+        applications.applications.count + 1
     }
 
     private var isMenuEnabled: Binding<Bool> {
@@ -515,6 +513,8 @@ private struct OpenWithPage: View {
                 enableAll: enableAll,
                 disableAll: disableAll
             )
+
+            CodexHereToggleRow(toolbox: toolbox)
 
             Toggle(isOn: isMenuEnabled) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -539,13 +539,20 @@ private struct OpenWithPage: View {
                     .font(.headline)
                 Spacer()
                 Button("重新扫描") {
-                    applications.scan()
+                    applications.scan(userInitiated: true)
                 }
+                .help("重新查询 Launch Services 中的预置 App 和手动添加的 App")
                 Button {
                     applications.chooseAndAddApplication()
                 } label: {
                     Label("添加其他 App…", systemImage: "plus")
                 }
+            }
+
+            if let scanMessage = applications.lastScanMessage {
+                Label(scanMessage, systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(ToolboxTheme.secondaryText)
             }
 
             VStack(spacing: 0) {
@@ -599,6 +606,168 @@ private struct OpenWithPage: View {
     private func disableApplications() {
         for application in applications.applications {
             applications.setEnabled(false, for: application)
+        }
+    }
+}
+
+private struct CodexHereToggleRow: View {
+    @ObservedObject var toolbox: ToolboxConfigurationModel
+    @AppStorage(
+        SharedDefaults.codexHereTerminalKey,
+        store: SharedDefaults.store
+    ) private var selectedTerminalRaw = CodexHereTerminal.defaultValue.rawValue
+
+    private var isEnabled: Binding<Bool> {
+        Binding(
+            get: { toolbox.isEnabled(.codexHere) },
+            set: { toolbox.setEnabled($0, for: .codexHere) }
+        )
+    }
+
+    private var selectedTerminal: CodexHereTerminal {
+        let configured = CodexHereTerminal(rawValue: selectedTerminalRaw)
+            ?? .defaultValue
+        return CodexHerePresentation.isAvailable(configured)
+            ? configured
+            : .terminal
+    }
+
+    private var terminalSelection: Binding<CodexHereTerminal> {
+        Binding(
+            get: { selectedTerminal },
+            set: { terminal in
+                selectedTerminalRaw = terminal.rawValue
+                SharedDefaults.store.synchronize()
+            }
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Toggle(isOn: isEnabled) {
+                HStack(spacing: 12) {
+                    Image(nsImage: CodexHerePresentation.icon(size: 32))
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Codex Here!")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text(CodexHerePresentation.statusDescription(
+                            terminal: selectedTerminal
+                        ))
+                            .font(.caption)
+                            .foregroundStyle(ToolboxTheme.secondaryText)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 16)
+                    ActionStatusBadge(
+                        isImplemented: true,
+                        isEnabled: toolbox.isEnabled(.codexHere)
+                    )
+                }
+                .contentShape(Rectangle())
+            }
+            .toggleStyle(.switch)
+            .controlSize(.regular)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
+            Divider().opacity(0.35)
+
+            HStack(spacing: 12) {
+                Label("运行终端", systemImage: "terminal")
+                    .font(.callout.weight(.medium))
+                Spacer()
+                Picker("运行终端", selection: terminalSelection) {
+                    ForEach(CodexHereTerminal.allCases) { terminal in
+                        Text(
+                            CodexHerePresentation.isAvailable(terminal)
+                                ? terminal.displayName
+                                : "\(terminal.displayName)（未安装）"
+                        )
+                        .tag(terminal)
+                        .disabled(!CodexHerePresentation.isAvailable(terminal))
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 160)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+        }
+        .background(ToolboxTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ToolboxTheme.border, lineWidth: 1)
+        }
+        .onAppear {
+            guard selectedTerminalRaw != selectedTerminal.rawValue else { return }
+            selectedTerminalRaw = selectedTerminal.rawValue
+            SharedDefaults.store.synchronize()
+        }
+    }
+}
+
+private enum CodexHerePresentation {
+    private static let codexBundleIdentifier = "com.openai.codex"
+
+    static func statusDescription(terminal: CodexHereTerminal) -> String {
+        guard codexCLIExists else { return "未检测到 Codex CLI" }
+        guard isAvailable(terminal) else { return "\(terminal.displayName) 未安装" }
+        return "在当前目录用 \(terminal.displayName) 启动 Codex"
+    }
+
+    static func isAvailable(_ terminal: CodexHereTerminal) -> Bool {
+        NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: terminal.bundleIdentifier
+        ) != nil
+    }
+
+    static func icon(size: CGFloat) -> NSImage {
+        let fallback = NSImage(
+            systemSymbolName: "terminal",
+            accessibilityDescription: "Codex"
+        ) ?? NSImage(size: NSSize(width: size, height: size))
+        guard let applicationURL = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: codexBundleIdentifier
+        ) else {
+            fallback.size = NSSize(width: size, height: size)
+            return fallback
+        }
+
+        let resourcesURL = applicationURL
+            .appendingPathComponent("Contents", isDirectory: true)
+            .appendingPathComponent("Resources", isDirectory: true)
+        for resourceName in ["icon-codex-dark-color.png", "icon-codex-light.png"] {
+            if let image = NSImage(
+                contentsOf: resourcesURL.appendingPathComponent(resourceName)
+            ) {
+                image.size = NSSize(width: size, height: size)
+                return image
+            }
+        }
+
+        let icon = NSWorkspace.shared.icon(forFile: applicationURL.path)
+        icon.size = NSSize(width: size, height: size)
+        return icon
+    }
+
+    private static var codexCLIExists: Bool {
+        let fileManager = FileManager.default
+        let home = fileManager.homeDirectoryForCurrentUser
+        let candidates = [
+            URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+            URL(fileURLWithPath: "/usr/local/bin/codex"),
+            home.appendingPathComponent(".local/bin/codex"),
+            home.appendingPathComponent(".npm-global/bin/codex"),
+            home.appendingPathComponent(".volta/bin/codex")
+        ]
+        return candidates.contains {
+            fileManager.isExecutableFile(atPath: $0.path)
         }
     }
 }
@@ -661,10 +830,10 @@ private struct DirectoryLearningPage: View {
     private var learningToggle: Binding<Bool> {
         Binding(
             get: {
-                SharedDefaults.isAppGroupAvailable && directoryLearningEnabled
+                SharedDefaults.isSharedStorageAvailable && directoryLearningEnabled
             },
             set: { isEnabled in
-                guard SharedDefaults.isAppGroupAvailable else { return }
+                guard SharedDefaults.isSharedStorageAvailable else { return }
                 directoryLearningEnabled = isEnabled
             }
         )
@@ -705,7 +874,7 @@ private struct DirectoryLearningPage: View {
                     Spacer()
                     ActionStatusBadge(
                         isImplemented: true,
-                        isEnabled: SharedDefaults.isAppGroupAvailable
+                        isEnabled: SharedDefaults.isSharedStorageAvailable
                             && directoryLearningEnabled
                     )
                 }
@@ -713,11 +882,11 @@ private struct DirectoryLearningPage: View {
             }
             .toggleStyle(.switch)
             .controlSize(.regular)
-            .disabled(!SharedDefaults.isAppGroupAvailable)
+            .disabled(!SharedDefaults.isSharedStorageAvailable)
             .help(
-                SharedDefaults.isAppGroupAvailable
+                SharedDefaults.isSharedStorageAvailable
                     ? "暂停后保留现有固定、常用与最近目录"
-                    : "App Group 不可用，目录学习已关闭"
+                    : "共享存储不可用，目录学习已关闭"
             )
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -964,12 +1133,13 @@ private struct DirectoryHistoryRow: View {
 
 private struct GeneralSettingsPage: View {
     @ObservedObject var toolbox: ToolboxConfigurationModel
+    @ObservedObject var loginItem: LoginItemModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             PageHeader(
                 title: "设置",
-                subtitle: "管理 Finder 扩展、快速配置与按需文件权限。"
+                subtitle: "管理 Finder 扩展、启动与版本信息。"
             )
 
             GroupBox("Finder 扩展") {
@@ -978,7 +1148,7 @@ private struct GeneralSettingsPage: View {
                         Text("由 macOS 系统设置管理")
                             .foregroundStyle(ToolboxTheme.secondaryText)
                     }
-                    Text("Magic Right 不会用 App 内开关伪装系统扩展状态。")
+                    Text("在系统设置中启用或停用 Finder 右键扩展。")
                         .font(.callout)
                         .foregroundStyle(ToolboxTheme.secondaryText)
                     Button("打开扩展设置") {
@@ -986,6 +1156,36 @@ private struct GeneralSettingsPage: View {
                             string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
                         ) else { return }
                         NSWorkspace.shared.open(url)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(4)
+            }
+            .groupBoxStyle(GraphiteGroupBoxStyle())
+
+            GroupBox("启动") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(
+                        "登录时自动启动 Magic Right",
+                        isOn: Binding(
+                            get: { loginItem.isRegistered },
+                            set: { loginItem.setEnabled($0) }
+                        )
+                    )
+                    .disabled(!loginItem.canChangeRegistration)
+                    Text(loginItem.statusDescription)
+                        .font(.callout)
+                        .foregroundStyle(ToolboxTheme.secondaryText)
+
+                    if loginItem.requiresApproval {
+                        Button("打开登录项设置") {
+                            loginItem.openSystemSettings()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    if let errorMessage = loginItem.errorMessage {
+                        ErrorLabel(message: errorMessage)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1010,11 +1210,43 @@ private struct GeneralSettingsPage: View {
             }
             .groupBoxStyle(GraphiteGroupBoxStyle())
 
-            GroupBox("权限原则") {
-                Text("Magic Right 只在实际需要时请求目录访问，不会在首次启动时要求完全磁盘访问。")
-                    .foregroundStyle(ToolboxTheme.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(4)
+            GroupBox("权限") {
+                Text("首次访问受保护目录或使用当前窗口跳转时，macOS 会请求相应权限。")
+                .foregroundStyle(ToolboxTheme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(4)
+            }
+            .groupBoxStyle(GraphiteGroupBoxStyle())
+
+            GroupBox("关于") {
+                HStack(spacing: 16) {
+                    Image(nsImage: NSApplication.shared.applicationIconImage)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 72, height: 72)
+                        .accessibilityLabel("Magic Right 图标")
+                        .shadow(color: .black.opacity(0.14), radius: 5, y: 2)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Magic Right")
+                            .font(.title3.weight(.semibold))
+                        Text("开源的 Finder 右键工具箱")
+                            .font(.callout)
+                            .foregroundStyle(ToolboxTheme.secondaryText)
+                        HStack(spacing: 7) {
+                            Text("版本 \(AppVersionPresentation.version)")
+                            Text("•")
+                                .foregroundStyle(ToolboxTheme.secondaryText)
+                            Text("构建 \(AppVersionPresentation.build)")
+                        }
+                        .font(.callout)
+                        .monospacedDigit()
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(4)
             }
             .groupBoxStyle(GraphiteGroupBoxStyle())
 
@@ -1023,6 +1255,16 @@ private struct GeneralSettingsPage: View {
             }
         }
     }
+}
+
+private enum AppVersionPresentation {
+    static let version = Bundle.main.object(
+        forInfoDictionaryKey: "CFBundleShortVersionString"
+    ) as? String ?? "0.1.0"
+
+    static let build = Bundle.main.object(
+        forInfoDictionaryKey: "CFBundleVersion"
+    ) as? String ?? "1"
 }
 
 private struct GraphiteGroupBoxStyle: GroupBoxStyle {
@@ -1068,13 +1310,14 @@ private extension ToolboxAction {
         case .copyTo: "复制到"
         case .cut: "剪切"
         case .paste: "粘贴"
-        case .frequentDirectories: "在菜单中显示常用目录"
+        case .frequentDirectories: "在菜单中显示“跳转到”"
         case .archive: "压缩"
         case .unarchive: "解压"
         case .openWith: "在菜单中显示打开方式"
+        case .codexHere: "Codex Here!"
         case .copyAbsolutePath: "复制绝对路径"
         case .copyShellPath: "复制 Shell 安全路径"
-        case .copyFileURL: "复制 file:// URL"
+        case .copyFileURL: "已移除的旧版动作"
         case .copyGitRelativePath: "复制 Git 相对路径"
         case .openGitRoot: "打开 Git 根目录"
         case .openGitRootInEditor: "在编辑器中打开仓库"
@@ -1095,17 +1338,18 @@ private extension ToolboxAction {
         case .newJSON: "创建有效的空 JSON 对象。"
         case .newYAML: "创建有效的 YAML 文档。"
         case .newGitignore: "创建隐藏的 .gitignore，已存在时安全编号。"
-        case .moveTo: "移动到常用或自定义目录，并保留可撤销记录。"
-        case .copyTo: "复制到目标目录，不静默覆盖已有文件。"
-        case .cut: "把所选项目放入 Magic Right 剪贴板。"
-        case .paste: "在当前目录安全粘贴已剪切项目。"
-        case .frequentDirectories: "显示固定、常用和最近目录子菜单。"
+        case .moveTo: "移动到固定、常用或最近目录；自动避让重名并记录结果。"
+        case .copyTo: "复制到固定、常用或最近目录；绝不静默覆盖。"
+        case .cut: "把标准文件 URL 写入 macOS 系统剪贴板，其他 App 也能识别。"
+        case .paste: "读取系统文件剪贴板；Magic Right 剪切时移动，其他来源按复制处理。"
+        case .frequentDirectories: "显示“跳转到”，并与“移动到”“复制到”共用同一套目录。"
         case .archive: "使用系统 ZIP 或 tar.gz 格式压缩。"
         case .unarchive: "验证归档路径后解压到安全目录。"
         case .openWith: "显示已启用的编辑器、终端和开发工具。"
+        case .codexHere: "使用设置中选择的终端，在当前目录启动 Codex。"
         case .copyAbsolutePath: "复制所选文件或目录的完整路径。"
         case .copyShellPath: "复制经过单引号转义的安全命令行路径。"
-        case .copyFileURL: "复制百分号编码的本地 file URL。"
+        case .copyFileURL: "仅用于读取旧配置，不再显示或执行。"
         case .copyGitRelativePath: "复制相对于当前仓库根目录的路径。"
         case .openGitRoot: "在 Finder 中定位当前仓库根目录。"
         case .openGitRootInEditor: "用首选编辑器打开整个仓库。"
@@ -1131,9 +1375,10 @@ private extension ToolboxAction {
         case .archive: "archivebox"
         case .unarchive: "arrow.down.doc"
         case .openWith: "macwindow"
+        case .codexHere: "terminal"
         case .copyAbsolutePath: "link"
         case .copyShellPath: "terminal"
-        case .copyFileURL: "doc.on.doc"
+        case .copyFileURL: "nosign"
         case .copyGitRelativePath: "point.bottomleft.forward.to.point.topright.scurvepath"
         case .openGitRoot: "folder"
         case .openGitRootInEditor: "curlybraces.square"

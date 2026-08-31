@@ -1,4 +1,5 @@
 import Foundation
+import SuperRightCore
 
 @MainActor
 enum SharedDefaults {
@@ -7,24 +8,27 @@ enum SharedDefaults {
     static let directoryHistoryKey = "directoryHistory.v1"
     static let directoryLearningEnabledKey = "directoryLearningEnabled"
     static let toolboxConfigurationKey = "toolboxConfiguration.v1"
-    static let appGroupStore = UserDefaults(suiteName: suiteName)
+    static let codexHereTerminalKey = "codexHereTerminal.v1"
+    static let storage = SharedStorageManager(appGroupSuiteName: suiteName)
     // SwiftUI requires a nonoptional store. Shared-data reads and mutations
-    // still guard `isAppGroupAvailable`; this fallback is never treated as a
-    // successful cross-process save.
-    static let store = appGroupStore ?? .standard
+    // still guard `isSharedStorageAvailable`; `.standard` is only a UI-safe
+    // last resort when neither cross-process backend can be created.
+    static let store = storage.defaults ?? .standard
 
     static var isAppGroupAvailable: Bool {
-        appGroupStore != nil && appGroupContainerURL != nil
+        storage.isAppGroupAvailable
     }
 
-    static var appGroupContainerURL: URL? {
-        FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: suiteName
-        )
+    static var isSharedStorageAvailable: Bool {
+        storage.isAvailable
+    }
+
+    static var containerURL: URL? {
+        storage.containerURL
     }
 
     static var directoryHistoryLockURL: URL? {
-        appGroupContainerURL?.appendingPathComponent(
+        containerURL?.appendingPathComponent(
             "directory-history.lock",
             isDirectory: false
         )

@@ -53,21 +53,22 @@ final class ToolboxConfigurationModel: ObservableObject {
     }
 
     private func ensureAppGroupAvailable() -> Bool {
-        guard SharedDefaults.isAppGroupAvailable else {
-            errorMessage = "App Group 不可用，设置没有保存；请检查签名与扩展权限。"
+        guard SharedDefaults.isSharedStorageAvailable else {
+            errorMessage = "共享存储不可用，设置没有保存；请检查存储目录权限。"
             return false
         }
         return true
     }
 
     private func persist() {
-        guard SharedDefaults.isAppGroupAvailable else {
-            errorMessage = "App Group 不可用，设置没有保存；请检查签名与扩展权限。"
+        guard SharedDefaults.isSharedStorageAvailable else {
+            errorMessage = "共享存储不可用，设置没有保存；请检查存储目录权限。"
             return
         }
         do {
             let data = try JSONEncoder().encode(configuration)
             SharedDefaults.store.set(data, forKey: SharedDefaults.toolboxConfigurationKey)
+            SharedDefaults.store.synchronize()
             errorMessage = nil
         } catch {
             errorMessage = "右键动作设置保存失败。"
@@ -78,10 +79,10 @@ final class ToolboxConfigurationModel: ObservableObject {
         configuration: ToolboxConfiguration,
         errorMessage: String?
     ) {
-        guard SharedDefaults.isAppGroupAvailable else {
+        guard SharedDefaults.isSharedStorageAvailable else {
             return (
                 .allDisabled,
-                "App Group 不可用，Finder 与 App 无法共享设置；请检查签名与扩展权限。"
+                "共享存储不可用，Finder 与 App 无法共享设置。"
             )
         }
         guard let data = SharedDefaults.store.data(

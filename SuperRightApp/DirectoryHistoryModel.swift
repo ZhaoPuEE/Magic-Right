@@ -10,8 +10,8 @@ final class DirectoryHistoryModel: ObservableObject {
 
     init() {
         history = DirectoryHistory()
-        if !SharedDefaults.isAppGroupAvailable {
-            errorMessage = "App Group 不可用，目录记录无法与 Finder 同步。"
+        if !SharedDefaults.isSharedStorageAvailable {
+            errorMessage = "共享存储不可用，目录记录无法与 Finder 同步。"
             return
         }
 
@@ -41,8 +41,8 @@ final class DirectoryHistoryModel: ObservableObject {
     }
 
     func reload() {
-        guard SharedDefaults.isAppGroupAvailable else {
-            errorMessage = "App Group 不可用，目录记录无法与 Finder 同步。"
+        guard SharedDefaults.isSharedStorageAvailable else {
+            errorMessage = "共享存储不可用，目录记录无法与 Finder 同步。"
             return
         }
         guard let lockURL = SharedDefaults.directoryHistoryLockURL else { return }
@@ -110,15 +110,15 @@ final class DirectoryHistoryModel: ObservableObject {
     }
 
     private var learningEnabled: Bool {
-        guard SharedDefaults.isAppGroupAvailable else { return false }
+        guard SharedDefaults.isSharedStorageAvailable else { return false }
         return SharedDefaults.store.object(
             forKey: SharedDefaults.directoryLearningEnabledKey
         ) as? Bool ?? true
     }
 
     private func ensureAppGroupAvailable() -> Bool {
-        guard SharedDefaults.isAppGroupAvailable else {
-            errorMessage = "App Group 不可用，目录记录没有保存。"
+        guard SharedDefaults.isSharedStorageAvailable else {
+            errorMessage = "共享存储不可用，目录记录没有保存。"
             return false
         }
         return true
@@ -126,7 +126,7 @@ final class DirectoryHistoryModel: ObservableObject {
 
     private func mutateHistory(_ change: (inout DirectoryHistory) -> Void) {
         guard let lockURL = SharedDefaults.directoryHistoryLockURL else {
-            errorMessage = "App Group 不可用，目录记录没有保存。"
+            errorMessage = "共享存储不可用，目录记录没有保存。"
             return
         }
         do {

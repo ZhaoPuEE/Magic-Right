@@ -8,25 +8,38 @@ import UniformTypeIdentifiers
 final class ApplicationRegistryModel: ObservableObject {
     @Published private(set) var applications: [DetectedApplication] = []
     @Published private(set) var errorMessage: String?
+    @Published private(set) var lastScanMessage: String?
 
     private var registry: ApplicationRegistry<NSWorkspaceApplicationLocator>
 
     init() {
-        let preferences = SharedDefaults.isAppGroupAvailable
+        let preferences = SharedDefaults.isSharedStorageAvailable
             ? Self.loadPreferences()
             : ApplicationPreferences()
         registry = ApplicationRegistry(
             preferences: preferences,
             locator: NSWorkspaceApplicationLocator()
         )
-        if !SharedDefaults.isAppGroupAvailable {
-            errorMessage = "App Group 不可用，应用动作设置无法与 Finder 同步。"
+        if !SharedDefaults.isSharedStorageAvailable {
+            errorMessage = "共享存储不可用，应用动作设置无法与 Finder 同步。"
         }
         scan()
     }
 
-    func scan() {
+    func scan(userInitiated: Bool = false) {
+        // Rebuild the Launch Services-backed locator instead of only assigning
+        // the current list again. This makes the button a real rescan after an
+        // application is installed, removed, or moved.
+        registry = ApplicationRegistry(
+            catalog: registry.catalog,
+            preferences: registry.preferences,
+            locator: NSWorkspaceApplicationLocator()
+        )
         applications = registry.detectedApplications()
+        if userInitiated {
+            let timestamp = Date.now.formatted(date: .omitted, time: .standard)
+            lastScanMessage = "扫描完成 · \(timestamp) · 发现 \(applications.count) 个预置或已添加 App"
+        }
     }
 
     func isEnabled(_ application: DetectedApplication) -> Bool {
@@ -62,14 +75,15 @@ final class ApplicationRegistryModel: ObservableObject {
     }
 
     private func persistAndRefresh() {
-        guard SharedDefaults.isAppGroupAvailable else {
-            errorMessage = "App Group 不可用，应用动作设置没有保存。"
+        guard SharedDefaults.isSharedStorageAvailable else {
+            errorMessage = "共享存储不可用，应用动作设置没有保存。"
             scan()
             return
         }
         do {
             let data = try JSONEncoder().encode(registry.preferences)
             SharedDefaults.store.set(data, forKey: SharedDefaults.applicationPreferencesKey)
+            SharedDefaults.store.synchronize()
             errorMessage = nil
         } catch {
             errorMessage = "应用菜单设置保存失败。"
@@ -78,8 +92,8 @@ final class ApplicationRegistryModel: ObservableObject {
     }
 
     private func ensureAppGroupAvailable() -> Bool {
-        guard SharedDefaults.isAppGroupAvailable else {
-            errorMessage = "App Group 不可用，应用动作设置没有保存。"
+        guard SharedDefaults.isSharedStorageAvailable else {
+            errorMessage = "共享存储不可用，应用动作设置没有保存。"
             return false
         }
         return true
@@ -89,9 +103,14 @@ final class ApplicationRegistryModel: ObservableObject {
         guard let data = SharedDefaults.store.data(
             forKey: SharedDefaults.applicationPreferencesKey
         ) else {
+            return .developerDefaults
+        }
+        guard let decoded = try? JSONDecoder().decode(
+            ApplicationPreferences.self,
+            from: data
+        ) else {
             return ApplicationPreferences()
         }
-        return (try? JSONDecoder().decode(ApplicationPreferences.self, from: data))
-            ?? ApplicationPreferences()
+        return decoded.addingMissingDeveloperDefaults()
     }
 }

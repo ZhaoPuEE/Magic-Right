@@ -19,6 +19,7 @@
 		10000000000000000000000A /* ApplicationRegistryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* ApplicationRegistryModel.swift */; };
 		10000000000000000000000B /* DirectoryHistoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000E /* DirectoryHistoryModel.swift */; };
 		10000000000000000000000C /* ToolboxConfigurationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000F /* ToolboxConfigurationModel.swift */; };
+		10000000000000000000000D /* LoginItemModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* LoginItemModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +62,7 @@
 		20000000000000000000000D /* ApplicationRegistryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRegistryModel.swift; sourceTree = "<group>"; };
 		20000000000000000000000E /* DirectoryHistoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryHistoryModel.swift; sourceTree = "<group>"; };
 		20000000000000000000000F /* ToolboxConfigurationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolboxConfigurationModel.swift; sourceTree = "<group>"; };
+		200000000000000000000010 /* LoginItemModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +105,7 @@
 				20000000000000000000000D /* ApplicationRegistryModel.swift */,
 				20000000000000000000000E /* DirectoryHistoryModel.swift */,
 				20000000000000000000000F /* ToolboxConfigurationModel.swift */,
+				200000000000000000000010 /* LoginItemModel.swift */,
 				200000000000000000000004 /* Assets.xcassets */,
 				20000000000000000000000C /* Info.plist */,
 				200000000000000000000007 /* SuperRightApp.entitlements */,
@@ -253,6 +256,7 @@
 				10000000000000000000000A /* ApplicationRegistryModel.swift in Sources */,
 				10000000000000000000000B /* DirectoryHistoryModel.swift in Sources */,
 				10000000000000000000000C /* ToolboxConfigurationModel.swift in Sources */,
+				10000000000000000000000D /* LoginItemModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -394,7 +398,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SuperRightApp/Info.plist;
@@ -416,7 +420,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SuperRightApp/Info.plist;
