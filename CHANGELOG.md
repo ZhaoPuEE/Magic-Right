@@ -4,6 +4,8 @@ All notable changes to Magic Right are documented here. The project follows Sema
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-01
+
 ### Fixed
 
 - Tabby Codex Here now creates a window when the Tabby process has none, while still reusing the existing single instance.

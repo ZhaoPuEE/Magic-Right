@@ -19,7 +19,7 @@
 
 <p align="center"><a href="README.zh-CN.md">简体中文</a></p>
 
-> **Latest release:** [Magic Right 0.1.0](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0) provides an Apple-silicon DMG for macOS 15 and later. The community build is ad-hoc signed and not Apple-notarized; Intel Macs have not been validated yet.
+> **Latest release:** [Magic Right 0.1.1](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.1) provides an Apple-silicon DMG for macOS 15 and later.
 
 ## One right-click, connected to your workflow
 

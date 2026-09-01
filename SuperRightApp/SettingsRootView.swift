@@ -1260,7 +1260,7 @@ private struct GeneralSettingsPage: View {
 private enum AppVersionPresentation {
     static let version = Bundle.main.object(
         forInfoDictionaryKey: "CFBundleShortVersionString"
-    ) as? String ?? "0.1.0"
+    ) as? String ?? "0.1.1"
 
     static let build = Bundle.main.object(
         forInfoDictionaryKey: "CFBundleVersion"

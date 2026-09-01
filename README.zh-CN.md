@@ -19,7 +19,7 @@
 
 <p align="center"><a href="README.md">English</a></p>
 
-> **最新版本**：[Magic Right 0.1.0](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0) 提供适用于 macOS 15 及以上版本的 Apple Silicon DMG。当前社区构建使用 ad-hoc 签名且未经 Apple 公证；Intel Mac 尚未完成验证。
+> **最新版本**：[Magic Right 0.1.1](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.1) 提供适用于 macOS 15 及以上版本的 Apple Silicon DMG。
 
 ## 一次右键，连接你的工作流
 
