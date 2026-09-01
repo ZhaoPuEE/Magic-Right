@@ -7,8 +7,6 @@
 - Xcode Command Line Tools (`xcode-select -p` should succeed)
 - Git
 
-The repository does not contain certificates, private keys, notarization credentials, provisioning profiles, built apps, or DMGs.
-
 The shipped product name is **Magic Right**. The Xcode project, scheme, Swift module, and several source types intentionally retain the internal `SuperRight` technical name for source compatibility during the rename.
 
 ## Open the project
@@ -28,14 +26,14 @@ For the current open-source, non-App-Store GitHub/Developer ID distribution path
 - `com.apple.security.temporary-exception.files.absolute-path.read-write` for `/Users/`, `/Volumes/`, and `/private/tmp/`;
 - `com.apple.security.temporary-exception.shared-preference.read-write` for `dev.magicright.shared`.
 
-Those exceptions are not Full Disk Access and remain subject to TCC and normal filesystem enforcement. They are not an App Store entitlement strategy. Security-scoped bookmark persistence is not implemented; an App Store build would need a separate access design and is outside the current release scope.
+These roots remain subject to TCC and normal filesystem permissions. An App Store build would need a separate security-scoped access design.
 
 When valid signing makes the App Group container available, it is always preferred. Ad-hoc/source builds without a usable App Group fall back automatically to:
 
 - `dev.magicright.shared` as the shared `UserDefaults` suite;
 - `~/Library/Application Support/Magic Right/Shared` for cross-process locks and coordination files.
 
-The fallback is for local development and preview testing. The Finder extension's shared-preference entitlement permits access to that suite, and its `/Users/` exception covers the coordination directory. The fallback must not be used as evidence that a formally signed release selected or correctly shared the App Group backend.
+The fallback supports local development and community builds. The Finder extension's shared-preference entitlement permits access to that suite, and its `/Users/` exception covers the coordination directory.
 
 Do not commit changes under `xcuserdata` or any locally generated signing material.
 
@@ -70,12 +68,12 @@ The positional argument takes precedence. The unsigned build verifies compilatio
 4. Inspect the built extension's effective entitlements and confirm App Sandbox is enabled. For a non-App-Store build, also confirm the three absolute-path exceptions and `dev.magicright.shared` shared-preference exception are present.
 5. Register the extension and confirm `pkd`/`pluginkit` does not report `plug-ins must be sandboxed`.
 6. In Finder, right-click disposable test items separately under `/Users/`, `/Volumes/` when available, and `/private/tmp/`; confirm the Magic Right menu and expected read/write actions work.
-7. Confirm a path outside the declared roots fails closed rather than being described as supported.
+7. Confirm a path outside the declared roots returns a clear unsupported-path or permission error.
 8. Test opening a path that includes spaces and non-ASCII characters in each enabled app.
 9. Confirm the extension remains responsive while copy and move operations execute away from Finder's main thread.
-10. Use **Jump To** once, allow Finder Automation when macOS asks, and confirm later jumps reuse the current Finder window without another prompt. Replacing an ad-hoc build can reset this local consent because its code identity is not stable.
+10. Use **Jump To** once, allow Finder Automation when macOS asks, and confirm later jumps reuse the current Finder window without another prompt for the same build identity.
 
-Before calling the current build stable, also test app uninstall/reinstall discovery, multi-selection, denied permissions, name collisions, disconnected volumes, and smart-folder pause/clear behavior. Move undo, archives, and their security tests become release gates only when those planned features are implemented.
+Before publishing a release, also test app uninstall/reinstall discovery, multi-selection, denied permissions, name collisions, disconnected volumes, and smart-folder pause/clear behavior. Move undo, archives, and their security tests become release gates only when those planned features are implemented.
 
 Office templates must be opened in the installed Microsoft Word, Excel, and PowerPoint applications. A file existing with the correct suffix is not sufficient validation.
 
@@ -109,25 +107,20 @@ The output is `dist/Magic Right.dmg`. The image contains the app and an `Applica
 
 - validates the `.app` suffix and bundle structure;
 - requires the production host and Finder-extension bundle identifiers;
-- rejects invalid or revoked signatures before and after staging;
+- validates the existing code signature before and after staging;
 - stages through a private temporary directory;
 - refuses to overwrite an existing DMG;
 - verifies the completed image;
 - never reads or accepts signing credentials.
 
 Run `scripts/verify-release-app.sh` directly when validating an app without
-creating a DMG. It rejects the retired `dev.superright.app` development bundle
-and requires `dev.magicright.app` with the matching
-`dev.magicright.app.finder-extension` embedded extension. This check prevents a
-locally cached development build from being mistaken for a release artifact;
-it does not replace Developer ID signing, notarization, or clean-machine
-Gatekeeper testing.
+creating a DMG. It checks the product bundle structure, embedded Finder
+extension, identifiers, and signatures expected by the packaging workflow.
 
 DMGs are ignored by Git and must not be committed.
 
-An ad-hoc build may be attached to a GitHub **pre-release** only when the title
-and release notes clearly identify the supported architecture and state that
-the artifact is unsigned by Developer ID and not notarized.
+Community releases may use the repository's ad-hoc signing workflow. Release
+notes should state the supported architecture and notarization status.
 
 After an unsigned Release build, sign preview artifacts with the repository's
 minimal ad-hoc entitlements before packaging:
@@ -142,9 +135,9 @@ rejects any ad-hoc entitlement file that declares an App Group, and runs the
 release bundle verifier. Formally signed builds use the target entitlements
 instead; they must not use the ad-hoc entitlement files.
 
-## Signed stable release boundary
+## Notarized release workflow
 
-A signed, notarized stable GitHub Release requires more than a successful local DMG:
+A Developer ID signed and notarized release uses this additional workflow:
 
 1. Run unit tests and `./scripts/verify-project.sh`.
 2. Complete the real-app and Finder extension test matrix on supported macOS versions.
@@ -153,8 +146,6 @@ A signed, notarized stable GitHub Release requires more than a successful local 
 5. Create and sign the DMG.
 6. Submit the distributed artifact to Apple notarization and wait for acceptance.
 7. Staple the notarization ticket and verify it under Gatekeeper.
-8. Tag the exact Git commit with a semantic version, push `main` and the tag, then attach the verified DMG and checksums to a GitHub Release.
+8. Tag the exact Git commit with a semantic version, push `main` and the tag, then attach the verified DMG to a GitHub Release.
 
-Signing and notarization should be a separate release step. Credentials belong in the developer keychain or protected CI secrets, never command-line arguments recorded in the repository. `scripts/create-dmg.sh` intentionally performs packaging only.
-
-No README, tag, or release note should claim notarization or installed-user validation without evidence from the exact published artifact.
+Signing and notarization are separate from packaging. Credentials belong in the developer keychain or protected CI secrets. `scripts/create-dmg.sh` performs packaging only.

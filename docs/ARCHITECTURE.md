@@ -1,6 +1,6 @@
 # Architecture
 
-This document defines the intended V1 boundaries. It is a contract for implementation and review, not a claim that every component is already complete.
+This document defines the intended V1 boundaries for implementation and review.
 
 ## System shape
 
@@ -45,7 +45,7 @@ For the current non-App-Store build, the extension entitlement grants `com.apple
 
 It also grants `com.apple.security.temporary-exception.shared-preference.read-write` for `dev.magicright.shared`, allowing the sandboxed extension to use the fallback preference suite when no App Group container is available. A valid App Group remains the preferred backend.
 
-These are intentionally explicit temporary exceptions, not general Full Disk Access and not security-scoped bookmarks. They do not bypass TCC, ACLs, file ownership, read-only volumes, or other macOS enforcement. Paths outside those roots are outside the extension's declared read/write scope. This entitlement design targets open-source GitHub/Developer ID distribution and is not an App Store entitlement contract; an App Store variant would require a separate bookmark-based or otherwise App-Store-compatible architecture.
+These explicit exceptions remain subject to TCC, ACLs, file ownership, and read-only volume rules. Paths outside the listed roots are outside the extension's read/write scope. An App Store variant would use a separate bookmark-based access architecture.
 
 ## Toolbox control center
 
@@ -78,7 +78,7 @@ All shipped implementation and assets must be original or carry a compatible, do
 - imported template metadata when that feature is implemented;
 - pending structured action requests and compact operation results.
 
-Large or mutable histories belong to versioned shared storage managed from the host app. The extension reads only the bounded data needed to derive its menu destinations and never performs storage migration while Finder is asking for a menu. Schema changes require an explicit version and a backward-compatible read path during upgrades. The fallback is a development/ad-hoc compatibility path, not evidence that the validly signed App Group backend has been release-tested.
+Large or mutable histories belong to versioned shared storage managed from the host app. The extension reads only the bounded data needed to derive its menu destinations and never performs storage migration while Finder is asking for a menu. Schema changes require an explicit version and a backward-compatible read path during upgrades. Local and community builds use the fallback backend; compatible signed builds use the App Group backend.
 
 Actions use typed payloads such as `open(appID, urls)`, `openGitRoot(appID, url)`, or `move(urls, destinationURL)`. Selection URLs are captured when Finder asks the extension to build the menu rather than queried after the menu closes. A payload never contains a command line to evaluate.
 
@@ -118,7 +118,7 @@ V1 behavior:
 - the Finder menu shows the top eight frequent entries by default;
 - complete history is retained until the user deletes it;
 - missing paths are hidden from menus but their records remain;
-- when learning is enabled, readable directories within `/Users/`, `/Volumes/`, and `/private/tmp/` are eligible unless the user excludes them; the temporary exception does not grant system-wide access.
+- when learning is enabled, readable directories within `/Users/`, `/Volumes/`, and `/private/tmp/` are eligible unless the user excludes them.
 
 Pinned, frequent, and recent are separate views over the history store. They feed one destination catalog consumed by Jump To, Move To, and Copy To, with duplicates removed while preserving useful priority. User-supplied display names never replace the canonical URL. The current sandboxed extension stores canonical paths and relies on its declared temporary path exceptions; security-scoped bookmark creation, persistence, and stale-bookmark renewal are not implemented.
 
@@ -167,8 +167,6 @@ Git detection walks parent directories from the selected URL without scanning un
 - No silent overwrite or permanent-delete action.
 - No accessibility permission dependency.
 - No directory-content collection for smart folders.
-- No claim that security-scoped bookmark persistence exists in the current extension build.
-- No signing credential, certificate, notarization profile, or built artifact in the repository.
 - No copied third-party code, interface text, icon, template, or brand asset without a compatible documented license.
 
 See [Privacy](PRIVACY.md) and [Permissions](PERMISSIONS.md) for the user-facing consequences of these invariants.

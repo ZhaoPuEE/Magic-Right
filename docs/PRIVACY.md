@@ -18,7 +18,7 @@ The host app is non-sandboxed. The Finder extension is sandboxed and, for the cu
 
 ## Smart folder learning
 
-When the user enables learning, Magic Right records eligible directory visits reported by Finder and directories opened through Magic Right. For the current extension, eligible paths are constrained by the declared `/Users/`, `/Volumes/`, and `/private/tmp/` temporary exceptions and by macOS privacy/filesystem enforcement. Hidden paths within those roots may be recorded unless explicitly excluded; this is not permission to observe arbitrary system directories.
+When the user enables learning, Magic Right records eligible directory visits reported by Finder and directories opened through Magic Right. Eligible paths are constrained to `/Users/`, `/Volumes/`, and `/private/tmp/` and remain subject to macOS privacy and filesystem permissions. Hidden paths within those roots may be recorded unless explicitly excluded.
 
 Learning does **not**:
 
@@ -50,7 +50,7 @@ Settings must provide controls to:
 - remove imported templates and destinations;
 - clear recoverable operation history.
 
-Removing the app does not automatically guarantee removal of shared data. A validly signed build prefers the App Group container; ad-hoc/source builds may use the `dev.magicright.shared` defaults suite and `~/Library/Application Support/Magic Right/Shared`. Complete-uninstall instructions must identify only these exact backends after verifying which one the build used; documentation must never recommend deleting a broad Library directory.
+Removing the app does not automatically remove shared data. Signed builds prefer the App Group container; local and community builds use the `dev.magicright.shared` defaults suite and `~/Library/Application Support/Magic Right/Shared`. Complete-uninstall instructions should identify the backend used by the installed build.
 
 ## Future contributions
 

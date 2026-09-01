@@ -41,7 +41,7 @@ The action list is only the control surface. The product's differentiating engin
 
 Codex Here is a built-in workflow action rather than another discovered application row. Finder always exposes one Codex Here entry; Settings chooses System Terminal, Ghostty, or Tabby as its execution terminal. The action is visible when Codex and the selected terminal are available and uses the selected item’s directory context. Terminal-specific adapters pass the directory and resolved Codex executable as positional data without synthetic input or path interpolation into executable script source.
 
-The interface should express these capabilities in Magic Right's own visual language. It must not imitate another product's layout, copy, icons, ordering, or branded assets.
+The interface expresses these capabilities through Magic Right's own layout, copy, icons, ordering, and visual language.
 
 ## Three separate states
 
@@ -88,7 +88,7 @@ A custom display name changes menu presentation only; the canonical directory UR
 
 The host app and Finder extension resolve one compact, versioned shared-storage backend. A valid App Group from a formally signed build is always preferred. An ad-hoc or source build without a usable App Group falls back to the `dev.magicright.shared` defaults suite and uses `~/Library/Application Support/Magic Right/Shared` for cross-process coordination files. The extension reads the resolved backend and renders only actions that are implemented, enabled, and relevant to the current selection. It captures the selection and target directory while building the menu so clicking a first-level action does not depend on Finder still exposing transient selection state after the menu closes. A missing first-run configuration uses a small product default; a present but corrupt configuration fails closed with all optional actions disabled.
 
-The host app is non-sandboxed, but macOS plug-in registration requires the Finder extension to be sandboxed. In the current open-source, non-App-Store GitHub/Developer ID architecture, that extension receives temporary read/write exceptions only for `/Users/`, `/Volumes/`, and `/private/tmp/`, plus shared-preference access to `dev.magicright.shared`. Security-scoped bookmark persistence is not implemented. These exceptions remain subject to TCC and ordinary filesystem permissions; an App Store build would require a separate access and migration design.
+The host app is non-sandboxed, while macOS plug-in registration requires the Finder extension to be sandboxed. For the current GitHub distribution architecture, that extension receives temporary read/write exceptions for `/Users/`, `/Volumes/`, and `/private/tmp/`, plus shared-preference access to `dev.magicright.shared`. These roots remain subject to TCC and ordinary filesystem permissions. An App Store build would use a separate security-scoped access and migration design.
 
 ## Visual and accessibility principles
 

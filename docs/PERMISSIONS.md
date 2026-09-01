@@ -14,7 +14,7 @@ The host app sets `ENABLE_APP_SANDBOX = NO`. The Finder extension sets `ENABLE_A
 
 For the current open-source, non-App-Store GitHub/Developer ID build, the extension has the `com.apple.security.temporary-exception.files.absolute-path.read-write` entitlement only for `/Users/`, `/Volumes/`, and `/private/tmp/`. It also has `com.apple.security.temporary-exception.shared-preference.read-write` for the fallback `dev.magicright.shared` suite. A valid App Group is still preferred when signing makes it available.
 
-These temporary exceptions do not grant general disk access and do not bypass TCC, ACLs, ownership, read-only volumes, or other macOS protections. Paths outside the three declared roots are outside the extension's read/write scope. Security-scoped bookmark creation and persistence are not implemented. An App Store build would require a separate, App-Store-compatible access model and is not the current distribution target.
+The extension can operate inside those roots subject to TCC, ACLs, ownership, and read-only volume rules. Paths outside them are outside its read/write scope. An App Store build would use a separate security-scoped access model.
 
 Some protected locations can still be denied by macOS. Magic Right should first report the exact failed action and offer a targeted retry or selection flow.
 
@@ -27,7 +27,7 @@ Full Disk Access is not an onboarding requirement, and granting it does not expa
 - that enabling Full Disk Access broadens access beyond that path;
 - that the user can continue using other locations without granting it.
 
-Magic Right must not claim to detect Full Disk Access perfectly: macOS does not expose a general authoritative status API. A targeted read/write probe for the requested operation is better evidence.
+macOS does not expose a general Full Disk Access status API, so diagnostics use a targeted read/write probe for the requested operation.
 
 ## Application launching
 
@@ -35,7 +35,7 @@ Opening a target in another app normally uses Launch Services/`NSWorkspace` and 
 
 The frequent-directory **Jump To** action is the exception: it asks the Magic Right host to change the target of Finder's current front window instead of opening another window. macOS requests Finder Automation consent on first use and retains that choice for the same stably signed app identity. The directory path is passed to `/usr/bin/osascript` as a positional argument and is never interpolated into AppleScript source. If there is no Finder window, the action creates one and then sets its target. Accessibility permission and simulated input are not used.
 
-Local ad-hoc development builds do not have a stable signing requirement. Replacing such a build can therefore make macOS ask for Automation or protected-folder access again. A Developer ID signed release keeps a stable identity across updates; Magic Right itself does not add a per-action confirmation dialog.
+macOS associates Automation consent with the app's code identity. Replacing a local ad-hoc build can trigger the system prompt again, while a consistently Developer ID signed build keeps the same identity across updates. Magic Right does not add a per-action confirmation dialog.
 
 Terminal and editor actions pass the selected paths to the target app. They do not grant Magic Right access that macOS has not already provided.
 
@@ -63,4 +63,4 @@ Any implementation that introduces one of these requirements must update this do
 
 ## Development signing
 
-The preferred backend requires compatible valid signing for the host app and Finder extension plus the same `group.dev.magicright.app` App Group entitlement. Before asking macOS for that container, Magic Right verifies that the running code has a non-empty Team ID and the exact App Group entitlement. Local ad-hoc/source builds have no Team ID, skip the container request entirely, and fall back to the entitled `dev.magicright.shared` preference suite plus `~/Library/Application Support/Magic Right/Shared`. Public ad-hoc preview artifacts are signed with the minimal files under `Signing/AdHoc`, which intentionally omit the App Group declaration so macOS does not inspect that protected container on their behalf. This fallback supports development and preview testing but does not prove the production App Group configuration works. A public DMG requires Apple Developer Program membership, Developer ID signing, notarization, stapling, verification of the Finder extension's sandbox and temporary-exception entitlements, and an end-to-end check that both processes selected the App Group backend; see [Building and releasing](BUILDING.md).
+The preferred backend requires compatible signing for the host app and Finder extension plus the same `group.dev.magicright.app` App Group entitlement. Magic Right selects it only when the running code has a non-empty Team ID and the exact entitlement. Local source and community builds use the `dev.magicright.shared` preference suite plus `~/Library/Application Support/Magic Right/Shared`; the minimal files under `Signing/AdHoc` intentionally omit App Group entitlements. See [Building and releasing](BUILDING.md) for both community and notarized release workflows.
