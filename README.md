@@ -19,7 +19,7 @@
 
 <p align="center"><a href="README.zh-CN.md">简体中文</a></p>
 
-> **0.1.0 open-source preview:** Core tests and Debug/Release builds pass locally and in GitHub Actions. An [Apple-silicon preview DMG](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0-preview.1) is available, but it is ad-hoc signed and not Apple-notarized, so macOS may block its first launch. A stable signed release still requires Developer ID signing, notarization, and clean-machine validation. Intel Macs have not been validated yet.
+> **0.1.0 open-source preview:** Core tests and Debug/Release builds pass locally and in GitHub Actions. An [Apple-silicon preview DMG](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0-preview.2) is available, but it is ad-hoc signed and not Apple-notarized, so macOS may block its first launch. A stable signed release still requires Developer ID signing, notarization, and clean-machine validation. Intel Macs have not been validated yet.
 >
 > **Download safety:** The current release uses bundle ID `dev.magicright.app`; its DMG SHA-256 is `afed2a14628d1b53455ed687aebc0e91ecc1ed6dbb236e34d3c54d6d622071d8`. A retired local development build used `dev.superright.app` and a development certificate that was later revoked. Do not run that old build. If macOS says an app contains malware and moves it to Trash, do not bypass that alert—verify that you downloaded the current asset and checksum, or build from the reviewed source.
 

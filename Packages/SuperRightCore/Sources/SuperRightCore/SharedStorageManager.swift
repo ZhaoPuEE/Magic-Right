@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// A resolved cross-process storage backend.
 ///
@@ -81,6 +82,7 @@ public struct SharedStorageManager: Sendable {
         fallbackSuiteName: String = Self.defaultFallbackSuiteName,
         applicationSupportURL: URL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support", isDirectory: true),
+        appGroupEligibilityProvider: ((String) -> Bool)? = nil,
         appGroupContainerProvider: (String) -> URL? = {
             FileManager.default.containerURL(
                 forSecurityApplicationGroupIdentifier: $0
@@ -96,18 +98,22 @@ public struct SharedStorageManager: Sendable {
             )
         }
     ) {
-        let appGroupContainerURL = appGroupContainerProvider(appGroupSuiteName)
-        let isAppGroupSuiteAvailable = defaultsProvider(appGroupSuiteName) != nil
-        if let appGroupLocation = SharedStorageLocation.preferred(
-            appGroupSuiteName: appGroupSuiteName,
-            appGroupContainerURL: appGroupContainerURL,
-            isAppGroupSuiteAvailable: isAppGroupSuiteAvailable,
-            fallbackSuiteName: fallbackSuiteName,
-            fallbackContainerURL: nil,
-            isFallbackSuiteAvailable: false
-        ) {
-            location = appGroupLocation
-            return
+        let canUseAppGroup = appGroupEligibilityProvider?(appGroupSuiteName)
+            ?? Self.currentProcessCanUseAppGroup(appGroupSuiteName)
+        if canUseAppGroup {
+            let appGroupContainerURL = appGroupContainerProvider(appGroupSuiteName)
+            let isAppGroupSuiteAvailable = defaultsProvider(appGroupSuiteName) != nil
+            if let appGroupLocation = SharedStorageLocation.preferred(
+                appGroupSuiteName: appGroupSuiteName,
+                appGroupContainerURL: appGroupContainerURL,
+                isAppGroupSuiteAvailable: isAppGroupSuiteAvailable,
+                fallbackSuiteName: fallbackSuiteName,
+                fallbackContainerURL: nil,
+                isFallbackSuiteAvailable: false
+            ) {
+                location = appGroupLocation
+                return
+            }
         }
 
         let fallbackContainerURL = applicationSupportURL
@@ -128,5 +134,39 @@ public struct SharedStorageManager: Sendable {
             fallbackContainerURL: fallbackContainerURL,
             isFallbackSuiteAvailable: defaultsProvider(fallbackSuiteName) != nil
         )
+    }
+
+    /// App Group APIs are only safe to query when the running code has both a
+    /// real team identity and the requested entitlement. Xcode ad-hoc builds
+    /// can retain the entitlement in their signature but have no Team ID, so
+    /// probing the container would ask macOS for access to other apps' data.
+    private static func currentProcessCanUseAppGroup(_ suiteName: String) -> Bool {
+        var dynamicCode: SecCode?
+        guard SecCodeCopySelf(SecCSFlags(), &dynamicCode) == errSecSuccess,
+              let dynamicCode
+        else {
+            return false
+        }
+
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(dynamicCode, SecCSFlags(), &staticCode) == errSecSuccess,
+              let staticCode
+        else {
+            return false
+        }
+
+        var rawInformation: CFDictionary?
+        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+        guard SecCodeCopySigningInformation(staticCode, flags, &rawInformation) == errSecSuccess,
+              let information = rawInformation as NSDictionary?,
+              let teamIdentifier = information[kSecCodeInfoTeamIdentifier] as? String,
+              !teamIdentifier.isEmpty,
+              let entitlements = information[kSecCodeInfoEntitlementsDict] as? NSDictionary,
+              let appGroups = entitlements["com.apple.security.application-groups"] as? [String]
+        else {
+            return false
+        }
+
+        return appGroups.contains(suiteName)
     }
 }

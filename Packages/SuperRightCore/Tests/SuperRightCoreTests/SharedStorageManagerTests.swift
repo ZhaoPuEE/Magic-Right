@@ -65,6 +65,7 @@ struct SharedStorageManagerTests {
                 appGroupSuiteName: "group.unavailable",
                 fallbackSuiteName: suiteName,
                 applicationSupportURL: root,
+                appGroupEligibilityProvider: { _ in false },
                 appGroupContainerProvider: { _ in nil }
             )
 
@@ -96,6 +97,7 @@ struct SharedStorageManagerTests {
             appGroupSuiteName: "group.available",
             fallbackSuiteName: "fallback.unused",
             applicationSupportURL: URL(fileURLWithPath: "/fallback", isDirectory: true),
+            appGroupEligibilityProvider: { _ in true },
             appGroupContainerProvider: { _ in appGroupURL },
             defaultsProvider: { _ in UserDefaults.standard },
             directoryCreator: { createdDirectories.append($0) }
@@ -107,12 +109,61 @@ struct SharedStorageManagerTests {
         #expect(createdDirectories.isEmpty)
     }
 
+    @Test("An ineligible build never probes the App Group container")
+    func ineligibleBuildSkipsAppGroupProbe() throws {
+        try withTemporaryDirectory { root in
+            let suiteName = "dev.magicright.tests.\(UUID().uuidString)"
+            defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+            var appGroupProbeCount = 0
+
+            let manager = SharedStorageManager(
+                appGroupSuiteName: "group.unavailable",
+                fallbackSuiteName: suiteName,
+                applicationSupportURL: root,
+                appGroupEligibilityProvider: { _ in false },
+                appGroupContainerProvider: { _ in
+                    appGroupProbeCount += 1
+                    return URL(fileURLWithPath: "/must-not-be-used", isDirectory: true)
+                }
+            )
+
+            #expect(appGroupProbeCount == 0)
+            #expect(manager.location?.kind == .applicationSupportFallback)
+        }
+    }
+
+    @Test("An eligible build still probes and prefers its App Group")
+    func eligibleBuildUsesAppGroupProbe() {
+        let appGroupURL = URL(fileURLWithPath: "/group/container", isDirectory: true)
+        var appGroupProbeCount = 0
+
+        let manager = SharedStorageManager(
+            appGroupSuiteName: "group.available",
+            fallbackSuiteName: "fallback.unused",
+            applicationSupportURL: URL(fileURLWithPath: "/fallback", isDirectory: true),
+            appGroupEligibilityProvider: { _ in true },
+            appGroupContainerProvider: { _ in
+                appGroupProbeCount += 1
+                return appGroupURL
+            },
+            defaultsProvider: { _ in UserDefaults.standard },
+            directoryCreator: { _ in
+                Issue.record("Eligible App Group unexpectedly created the fallback directory")
+            }
+        )
+
+        #expect(appGroupProbeCount == 1)
+        #expect(manager.isAppGroupAvailable)
+        #expect(manager.containerURL == appGroupURL)
+    }
+
     @Test("Fallback directory creation failure reports unavailable storage")
     func failedFallbackCreationIsUnavailable() {
         let manager = SharedStorageManager(
             appGroupSuiteName: "group.unavailable",
             fallbackSuiteName: "fallback.unavailable",
             applicationSupportURL: URL(fileURLWithPath: "/unavailable", isDirectory: true),
+            appGroupEligibilityProvider: { _ in false },
             appGroupContainerProvider: { _ in nil },
             defaultsProvider: { _ in UserDefaults.standard },
             directoryCreator: { _ in throw CocoaError(.fileWriteNoPermission) }

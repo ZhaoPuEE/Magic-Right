@@ -18,6 +18,7 @@ All notable changes to Magic Right are documented here. The project follows Sema
 - Shared pinned/frequent/recent destinations for Jump To, Move To, and Copy To.
 - Collision-safe move/copy execution with captured Finder context and a local operation journal.
 - Shared-storage resolution that prefers a valid App Group and, when it is unavailable to an ad-hoc/source build, falls back to the `dev.magicright.shared` defaults suite plus `~/Library/Application Support/Magic Right/Shared`.
+- App Group eligibility checks and minimal ad-hoc signing entitlements that prevent preview builds without a Team ID from probing or declaring another app-data container and repeatedly triggering macOS permission prompts.
 - A non-sandboxed host plus the sandboxed Finder extension required by macOS plug-in registration.
 - Non-App-Store Finder-extension temporary exceptions for read/write access under `/Users/`, `/Volumes/`, and `/private/tmp/`, plus shared-preference access to `dev.magicright.shared`; security-scoped bookmark persistence is not implemented.
 - Absolute-path and shell-safe-path copy actions.
@@ -36,6 +37,6 @@ All notable changes to Magic Right are documented here. The project follows Sema
 
 ### Validation status
 
-- 133 Shared Core tests and unsigned arm64 Debug/Release builds pass locally.
+- 135 Shared Core tests and unsigned arm64 Debug/Release builds pass locally.
 - A Magic Right branded, signed, and notarized DMG has not been produced yet.
 - The latest Finder execution path, the validly signed App Group backend, protected-folder writes, and notarization still require signed end-to-end validation.

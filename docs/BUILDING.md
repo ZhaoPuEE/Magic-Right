@@ -129,6 +129,19 @@ An ad-hoc build may be attached to a GitHub **pre-release** only when the title
 and release notes clearly identify the supported architecture and state that
 the artifact is unsigned by Developer ID and not notarized.
 
+After an unsigned Release build, sign preview artifacts with the repository's
+minimal ad-hoc entitlements before packaging:
+
+```bash
+./scripts/sign-ad-hoc-app.sh "/path/to/Magic Right.app"
+./scripts/create-dmg.sh "/path/to/Magic Right.app" "/path/to/output"
+```
+
+The ad-hoc signing script signs the embedded Finder extension before the host,
+rejects any ad-hoc entitlement file that declares an App Group, and runs the
+release bundle verifier. Formally signed builds use the target entitlements
+instead; they must not use the ad-hoc entitlement files.
+
 ## Signed stable release boundary
 
 A signed, notarized stable GitHub Release requires more than a successful local DMG:

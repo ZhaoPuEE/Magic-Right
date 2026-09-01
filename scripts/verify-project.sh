@@ -27,6 +27,13 @@ cd "$repo_root"
 
 verification_dir=$(mktemp -d "${TMPDIR:-/tmp}/super-right-verify.XXXXXX")
 cleanup() {
+  launch_services_register=/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister
+  products_dir="$verification_dir/DerivedData/Build/Products"
+  if [[ -x "$launch_services_register" && -d "$products_dir" ]]; then
+    while IFS= read -r -d '' built_bundle; do
+      "$launch_services_register" -u "$built_bundle" >/dev/null 2>&1 || true
+    done < <(find "$products_dir" -type d \( -name '*.appex' -o -name '*.app' \) -print0)
+  fi
   rm -rf "$verification_dir"
 }
 trap cleanup EXIT INT TERM
