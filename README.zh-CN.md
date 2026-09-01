@@ -20,6 +20,8 @@
 <p align="center"><a href="README.md">English</a></p>
 
 > **0.1.0 开源预览**：核心测试及 Debug / Release 构建已在本机和 GitHub Actions 通过。现在可以下载 [Apple Silicon 预览 DMG](https://github.com/ZhaoPuEE/Magic-Right/releases/tag/v0.1.0-preview.1)，但它仅为 ad-hoc 签名且未经 Apple 公证，macOS 可能阻止首次启动。正式稳定版仍需 Developer ID 签名、公证与干净环境验收；Intel Mac 尚未完成验证。
+>
+> **下载安全说明**：当前 Release 的 Bundle ID 为 `dev.magicright.app`，DMG SHA-256 为 `afed2a14628d1b53455ed687aebc0e91ecc1ed6dbb236e34d3c54d6d622071d8`。一个已停用的本地开发构建使用过 `dev.superright.app`，其开发证书后来被吊销，请勿再运行。如果 macOS 明确提示 App“包含恶意软件”并将它移到废纸篓，不要绕过该警告；请先核对当前下载资产与校验值，或从已审查的源码自行构建。
 
 ## 一次右键，连接你的工作流
 
