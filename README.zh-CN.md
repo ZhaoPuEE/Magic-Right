@@ -35,11 +35,35 @@
 
 启用的动作直接平铺在 Finder 右键菜单第一级。只有需要继续选择文件类型或目的地的动作才展开自己的子菜单，不会把所有能力塞进一个总菜单。
 
+## Finder 真机用法
+
+<p align="center">
+  <img src="docs/images/finder-context-menu.png" width="760" alt="Magic Right 在真机 Finder 右键菜单中的一级动作">
+</p>
+
+<p align="center"><sub>右键一个文件夹：Codex Here!、终端、编辑器、新建文件、目的地与路径工具都直接留在 Finder 第一级。</sub></p>
+
+<p align="center">
+  <img src="docs/images/finder-destinations.png" width="860" alt="Magic Right 在 Finder 中的跳转到智能目录二级菜单">
+</p>
+
+<p align="center"><sub>“跳转到”“移动到”“复制到”复用同一组学习到的目的地，同时保持整个工具箱平铺而不套总菜单。</sub></p>
+
 ## 界面
 
 Magic Right 是菜单栏 App，也是 Finder 功能控制中心。侧栏按应用动作、创建文件、智能目录、路径与仓库、文件操作和归档分区，每一项都可以独立进入或移出 Finder 菜单。
 
-<!-- 真机截图将在完成当前版本验收后写入 docs/images/control-center.png。 -->
+<p align="center">
+  <img src="docs/images/control-center.png" width="900" alt="Magic Right Finder 菜单控制中心">
+</p>
+
+<p align="center"><sub>控制中心通过轻量侧栏集中呈现功能分组与启用数量。</sub></p>
+
+<p align="center">
+  <img src="docs/images/application-actions.png" width="900" alt="Magic Right 应用动作、Codex Here 终端选择与自定义 App 注册">
+</p>
+
+<p align="center"><sub>集中选择 Codex Here! 终端、开关已发现的 App、重新扫描 Launch Services，或手动注册其他 macOS App。</sub></p>
 
 ## 3 分钟开始使用
 

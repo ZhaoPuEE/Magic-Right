@@ -35,11 +35,35 @@
 
 Enabled actions sit directly at the first level of Finder's context menu. Only actions that need another choice—such as a file type or destination—open their own focused submenu.
 
+## Real Finder workflow
+
+<p align="center">
+  <img src="docs/images/finder-context-menu.png" width="760" alt="Magic Right actions in the Finder context menu on a real Mac">
+</p>
+
+<p align="center"><sub>Right-click a folder: Codex Here!, terminals, editors, file creation, destinations, and path tools remain visible at Finder's first level.</sub></p>
+
+<p align="center">
+  <img src="docs/images/finder-destinations.png" width="860" alt="Magic Right Jump To smart destinations submenu in Finder">
+</p>
+
+<p align="center"><sub>Jump To, Move To, and Copy To reuse the same learned destinations without turning the whole toolkit into a nested menu.</sub></p>
+
 ## Interface
 
 Magic Right is both a menu bar app and the control center for its Finder actions. The sidebar separates Application Actions, Create Files, Smart Directories, Paths & Repositories, File Operations, and Archives; every capability can independently enter or leave Finder.
 
-<!-- A real-device screenshot will be added at docs/images/control-center.png after current-version validation. -->
+<p align="center">
+  <img src="docs/images/control-center.png" width="900" alt="Magic Right Finder menu control center">
+</p>
+
+<p align="center"><sub>The control center keeps feature groups and enabled counts visible in one lightweight sidebar.</sub></p>
+
+<p align="center">
+  <img src="docs/images/application-actions.png" width="900" alt="Magic Right application actions, Codex Here terminal selection, and custom app registration">
+</p>
+
+<p align="center"><sub>Choose the Codex Here! terminal, toggle discovered apps, rescan Launch Services, or register another macOS app.</sub></p>
 
 ## Start in three minutes
 
