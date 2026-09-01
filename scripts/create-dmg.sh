@@ -44,8 +44,8 @@ output_path="$output_dir/$product_name.dmg"
 
 [[ ! -e "$output_path" ]] || fail "refusing to overwrite existing output: $output_path"
 
-package_type=$(/usr/libexec/PlistBuddy -c 'Print :CFBundlePackageType' "$app_path/Contents/Info.plist" 2>/dev/null || true)
-[[ "$package_type" == "APPL" ]] || fail "Info.plist does not identify an application bundle (CFBundlePackageType=APPL)"
+script_dir=$(cd "$(dirname "$0")" && pwd -P)
+"$script_dir/verify-release-app.sh" "$app_path"
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/super-right-dmg.XXXXXX")
 stage_dir="$work_dir/stage"
@@ -58,6 +58,7 @@ trap cleanup EXIT INT TERM
 
 mkdir "$stage_dir"
 ditto "$app_path" "$stage_dir/$app_name"
+"$script_dir/verify-release-app.sh" "$stage_dir/$app_name"
 ln -s /Applications "$stage_dir/Applications"
 
 printf 'Creating %s\n' "$output_path"

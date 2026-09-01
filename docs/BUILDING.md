@@ -108,10 +108,20 @@ Given an already built `.app`:
 The output is `dist/Magic Right.dmg`. The image contains the app and an `Applications` symlink. The script:
 
 - validates the `.app` suffix and bundle structure;
+- requires the production host and Finder-extension bundle identifiers;
+- rejects invalid or revoked signatures before and after staging;
 - stages through a private temporary directory;
 - refuses to overwrite an existing DMG;
 - verifies the completed image;
 - never reads or accepts signing credentials.
+
+Run `scripts/verify-release-app.sh` directly when validating an app without
+creating a DMG. It rejects the retired `dev.superright.app` development bundle
+and requires `dev.magicright.app` with the matching
+`dev.magicright.app.finder-extension` embedded extension. This check prevents a
+locally cached development build from being mistaken for a release artifact;
+it does not replace Developer ID signing, notarization, or clean-machine
+Gatekeeper testing.
 
 DMGs are ignored by Git and must not be committed.
 
