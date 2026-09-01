@@ -147,10 +147,13 @@ public enum ApplicationOpenRequestBuilder {
 
     /// Builds a terminal-specific request for Codex Here.
     ///
-    /// Tabby's URL handler forwards the request to its existing single instance
-    /// and opens a new local tab. The tab starts the system zsh as an interactive
-    /// login shell, changes directory through positional parameters, and then
-    /// replaces itself with the already-resolved Codex binary. The small zsh
+    /// Tabby's URL handler and single-instance handoff open a new local tab. An
+    /// explicit launch also makes Tabby create a window before handling the URL
+    /// when its process is running without one. The tab starts the system zsh
+    /// as an interactive login shell, changes directory through positional
+    /// parameters, and runs the already-resolved Codex binary as its foreground
+    /// child. When Codex exits or is interrupted, the tab replaces the launcher
+    /// with a normal interactive login zsh in the same directory. The small zsh
     /// program is constant; Finder-controlled paths never become shell source.
     public static func makeCodexHereRequest(
         terminal: CodexHereTerminal = .defaultValue,
@@ -169,23 +172,24 @@ public enum ApplicationOpenRequestBuilder {
                 "-l",
                 "-i",
                 "-c",
-                #"cd -- "$1" && exec "$2""#,
+                #"cd -- "$1" || exit 1; "$2"; exec /bin/zsh -l -i"#,
                 "magic-right",
                 directoryURL.path,
                 codexExecutableURL.path
             ]
-            return .openURLs(
-                OpenURLsRequest(
+            let url = try tabbyURL(
+                command: "run",
+                queryItems: [
+                    URLQueryItem(
+                        name: "command",
+                        value: command.map(tabbyShellQuote).joined(separator: " ")
+                    )
+                ]
+            )
+            return .structuredLaunch(
+                StructuredLaunchRequest(
                     applicationBundleIdentifier: terminal.bundleIdentifier,
-                    urls: [try tabbyURL(
-                        command: "run",
-                        queryItems: [
-                            URLQueryItem(
-                                name: "command",
-                                value: command.map(tabbyShellQuote).joined(separator: " ")
-                            )
-                        ]
-                    )]
+                    arguments: [.flag(url.absoluteString)]
                 )
             )
 

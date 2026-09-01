@@ -2,6 +2,13 @@
 
 All notable changes to Magic Right are documented here. The project follows Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Tabby Codex Here now creates a window when the Tabby process has none, while still reusing the existing single instance.
+- Interrupting or exiting Codex in a Tabby Codex Here tab now returns to an interactive local zsh in the same directory instead of closing the terminal session.
+
 ## [0.1.0] - 2026-09-01
 
 ### Added

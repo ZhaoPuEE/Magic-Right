@@ -147,7 +147,7 @@ struct ApplicationOpenRequestTests {
         )
     }
 
-    @Test("Codex Here requests a new local zsh tab in Tabby's existing window")
+    @Test("Codex Here uses Tabby's handoff and returns to zsh after exit")
     func codexHereLocalZshURL() throws {
         let directory = URL(
             fileURLWithPath: "/tmp/a folder; touch danger",
@@ -160,8 +160,9 @@ struct ApplicationOpenRequestTests {
             intent: .currentDirectory(directory)
         )
 
-        guard case let .openURLs(openRequest) = request,
-              let url = openRequest.urls.first,
+        guard case let .structuredLaunch(openRequest) = request,
+              let urlString = openRequest.argumentValues.first,
+              let url = URL(string: urlString),
               let components = URLComponents(
                 url: url,
                 resolvingAgainstBaseURL: false
@@ -180,7 +181,7 @@ struct ApplicationOpenRequestTests {
             "'-l'",
             "'-i'",
             "'-c'",
-            #"'cd -- "$1" && exec "$2"'"#,
+            #"'cd -- "$1" || exit 1; "$2"; exec /bin/zsh -l -i'"#,
             "'magic-right'",
             "'\(directory.path)'",
             "'\(codex.path)'"
@@ -197,8 +198,9 @@ struct ApplicationOpenRequestTests {
             intent: .selection([file])
         )
 
-        guard case let .openURLs(openRequest) = request,
-              let url = openRequest.urls.first,
+        guard case let .structuredLaunch(openRequest) = request,
+              let urlString = openRequest.argumentValues.first,
+              let url = URL(string: urlString),
               let components = URLComponents(
                 url: url,
                 resolvingAgainstBaseURL: false
@@ -226,8 +228,9 @@ struct ApplicationOpenRequestTests {
             intent: .currentDirectory(directory)
         )
 
-        guard case let .openURLs(openRequest) = request,
-              let url = openRequest.urls.first,
+        guard case let .structuredLaunch(openRequest) = request,
+              let urlString = openRequest.argumentValues.first,
+              let url = URL(string: urlString),
               let components = URLComponents(
                 url: url,
                 resolvingAgainstBaseURL: false

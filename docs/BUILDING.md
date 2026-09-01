@@ -72,6 +72,7 @@ The positional argument takes precedence. The unsigned build verifies compilatio
 8. Test opening a path that includes spaces and non-ASCII characters in each enabled app.
 9. Confirm the extension remains responsive while copy and move operations execute away from Finder's main thread.
 10. Use **Jump To** once, allow Finder Automation when macOS asks, and confirm later jumps reuse the current Finder window without another prompt for the same build identity.
+11. Test Tabby Codex Here both with an existing window and with Tabby running without a window; interrupt Codex with `Ctrl+C` and confirm the same tab returns to an interactive zsh in the requested directory.
 
 Before publishing a release, also test app uninstall/reinstall discovery, multi-selection, denied permissions, name collisions, disconnected volumes, and smart-folder pause/clear behavior. Move undo, archives, and their security tests become release gates only when those planned features are implemented.
 

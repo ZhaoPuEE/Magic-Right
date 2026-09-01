@@ -103,7 +103,7 @@ Finder keeps a single `Codex Here!` action while Settings chooses the terminal:
 
 - **System Terminal** creates a local tab in the existing window. macOS asks for Automation permission on first use.
 - **Ghostty** receives the working directory and directly runs the resolved Codex executable.
-- **Tabby** reuses its existing instance and opens a local interactive zsh tab in the current directory.
+- **Tabby** reuses its existing instance or creates a window when none exists, then opens a local interactive zsh tab in the current directory. Exiting or interrupting Codex returns to zsh in the same tab.
 
 No keyboard input is simulated, and Finder paths are never interpolated into executable script source. The Finder action appears only when both the chosen terminal and local Codex executable can be resolved.
 
