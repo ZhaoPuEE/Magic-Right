@@ -4,6 +4,10 @@ All notable changes to Magic Right are documented here. The project follows Sema
 
 ## [Unreleased]
 
+### Fixed
+
+- Opening a Finder directory in Ghostty now uses Ghostty's native macOS directory-open handler, preserving the selected working directory and the user's loaded appearance configuration instead of launching a separate application instance.
+
 ## [0.1.1] - 2026-09-01
 
 ### Fixed

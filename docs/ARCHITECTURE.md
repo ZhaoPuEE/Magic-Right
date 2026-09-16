@@ -100,7 +100,7 @@ A discovered app enters the available list but is not automatically inserted int
 
 The registry chooses the narrowest safe strategy:
 
-1. **Known adapter**: an integration such as Tabby, Ghostty, VS Code, or Zed can provide structured arguments or a documented application URL for folders, files, multiple URLs, or a Git root. Tabby uses its URL handler to route requests into the existing single instance; adapters that require process arguments use an explicit new launch.
+1. **Known adapter**: an integration such as Tabby, Ghostty, VS Code, or Zed can provide structured arguments or a documented application URL for folders, files, multiple URLs, or a Git root. Tabby uses its URL handler to route requests into the existing single instance. Ghostty receives a directory URL through its native macOS file-open handler so the selected path and the running instance's loaded configuration are both preserved. Adapters that require process arguments use an explicit new launch.
 2. **Launch Services fallback**: ask `NSWorkspace` to open the selected URLs with the resolved application.
 3. **Validated custom template**: support only recognized tokens such as `{path}`, `{paths}`, and `{gitRoot}`, expanded into a process argument array.
 

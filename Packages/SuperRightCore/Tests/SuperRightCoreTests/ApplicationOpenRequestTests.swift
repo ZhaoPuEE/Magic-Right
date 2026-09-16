@@ -306,7 +306,7 @@ struct ApplicationOpenRequestTests {
         ))
     }
 
-    @Test("Ghostty opens a selected file's parent with one safe argument")
+    @Test("Ghostty opens a selected file's parent through its native directory handler")
     func ghosttySelectedFileUsesParentDirectory() throws {
         let ghostty = try #require(
             KnownApplicationCatalog.standard.descriptor(
@@ -323,16 +323,12 @@ struct ApplicationOpenRequestTests {
             intent: .selection([file])
         )
 
-        let expected = StructuredLaunchRequest(
-            applicationBundleIdentifier: "com.mitchellh.ghostty",
-            arguments: [
-                .pathOption(name: "--working-directory", url: parent)
-            ]
-        )
-        #expect(request == .structuredLaunch(expected))
-        #expect(expected.argumentValues == [
-            "--working-directory=\(parent.path)"
-        ])
+        #expect(request == .openURLs(
+            OpenURLsRequest(
+                applicationBundleIdentifier: "com.mitchellh.ghostty",
+                urls: [parent]
+            )
+        ))
     }
 
     @Test("Ghostty preserves a selected directory")
@@ -352,12 +348,10 @@ struct ApplicationOpenRequestTests {
             intent: .selection([directory])
         )
 
-        #expect(request == .structuredLaunch(
-            StructuredLaunchRequest(
+        #expect(request == .openURLs(
+            OpenURLsRequest(
                 applicationBundleIdentifier: "com.mitchellh.ghostty",
-                arguments: [
-                    .pathOption(name: "--working-directory", url: directory)
-                ]
+                urls: [directory]
             )
         ))
     }

@@ -124,15 +124,15 @@ public enum ApplicationOpenRequestBuilder {
                 for: intent,
                 firstURL: urls[0]
             )
-            return .structuredLaunch(
-                StructuredLaunchRequest(
+            // Ghostty's macOS application delegate handles directory file-open
+            // events by creating a surface with an explicit working directory.
+            // Delivering the directory URL also reuses Ghostty's running process,
+            // so the new surface inherits the user's loaded theme and appearance
+            // instead of starting a separate CLI-configured app instance.
+            return .openURLs(
+                OpenURLsRequest(
                     applicationBundleIdentifier: application.bundleIdentifier,
-                    arguments: [
-                        .pathOption(
-                            name: "--working-directory",
-                            url: directoryURL
-                        )
-                    ]
+                    urls: [directoryURL]
                 )
             )
         case .genericURLs, .zed, .visualStudioCode:
